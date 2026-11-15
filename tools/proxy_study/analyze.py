@@ -50,7 +50,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("jobs", type=Path)
     ap.add_argument("out", type=Path)
-    ap.add_argument("--profile", default="v3")
+    ap.add_argument("--profile", default="v4")
     ap.add_argument("--target-full-budget", type=int, default=10800)
     ap.add_argument("--target-lite-budget", type=int, default=1800)
     a = ap.parse_args()
