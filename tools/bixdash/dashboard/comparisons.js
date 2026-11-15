@@ -31,6 +31,7 @@
   const score = v => v === null ? 'Pending' : (v * 100).toFixed(1) + '%';
   const palette = ['#287bb8','#d56a34','#22966a','#a36ac4','#bd4e76','#8b7b30'];
   let rows = [], colors = {}, loading = false, initialized = false;
+  const hiddenRuns = new Set();
   function options(id, values, allLabel) {
     const old = $(id).value;
     $(id).innerHTML = `<option value="all">${allLabel}</option>` + values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
@@ -45,14 +46,15 @@
     hideTooltip();
     const selected = rows.filter(r => ($('task').value === 'all' || r.task === $('task').value) && ($('owner').value === 'all' || r.owner === $('owner').value));
     const partial = $('partial').checked, metric = $('budget').value;
+    const visible = selected.filter(r => !hiddenRuns.has(r.id) && ($('incomplete').checked || !r.budgetLowerBound));
     $('budget-heading').textContent = metric === 'tokens' ? 'Score vs total tokens' : 'Score vs model calls';
-    chart('cost-chart', plottable(selected, 'cost', partial), 'cost', 'Estimated analyst API cost (USD)');
-    chart('time-chart', plottable(selected, 'time', partial), 'time', 'Elapsed time (minutes)');
-    chart('budget-chart', plottable(selected, metric, partial), metric, metric === 'tokens' ? 'Total tokens (millions)' : 'Model calls');
+    chart('cost-chart', plottable(visible, 'cost', partial), 'cost', 'Estimated analyst API cost (USD)');
+    chart('time-chart', plottable(visible, 'time', partial), 'time', 'Elapsed time (minutes)');
+    chart('budget-chart', plottable(visible, metric, partial), metric, metric === 'tokens' ? 'Total tokens (millions)' : 'Model calls');
     const finals = selected.filter(r => r.score !== null && r.final).length;
     const inter = selected.filter(r => r.score !== null && !r.final).length;
     $('coverage').textContent = `${selected.length} runs selected · ${finals} final scores · ${inter} intermediate scores · ${selected.filter(r => r.score === null).length} awaiting a score.`;
-    $('run-table').innerHTML = selected.length ? selected.map(r => `<tr><td><span class="dot" style="background:${colors[r.id]}"></span> ${esc(r.name)}<div class="note">${esc(r.model)} · ${esc(r.condition)}</div></td><td>${esc(r.task)} / ${esc(r.owner)}</td><td>${score(r.score)}${r.score === null ? '' : `<br><span class="tag">${r.final ? 'Final' : 'Intermediate'}</span>`}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${r.cost === null ? '—' : '$' + r.cost.toFixed(2)}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.time)} min</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.calls)}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.tokens)}</td><td>${esc(r.status)}${r.budgetLowerBound ? '<div class="note">Budget: last recorded minimum</div>' : ''}</td></tr>`).join('') : '<tr><td colspan="8">No runs match these filters.</td></tr>';
+    $('run-table').innerHTML = selected.length ? selected.map(r => `<tr><td><input type="checkbox" data-run-id="${esc(r.id)}" aria-label="Show ${esc(r.name)} on plots" ${hiddenRuns.has(r.id) ? '' : 'checked'} ${r.score === null ? 'disabled' : ''}></td><td><span class="dot" style="background:${colors[r.id]}"></span> ${esc(r.name)}<div class="note">${esc(r.model)} · ${esc(r.condition)}</div></td><td>${esc(r.task)} / ${esc(r.owner)}</td><td>${score(r.score)}${r.score === null ? '' : `<br><span class="tag">${r.final ? 'Final' : 'Intermediate'}</span>`}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${r.cost === null ? '—' : '$' + r.cost.toFixed(2)}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.time)} min</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.calls)}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.tokens)}</td><td>${esc(r.status)}${r.budgetLowerBound ? '<div class="note">Budget: last recorded minimum</div>' : ''}</td></tr>`).join('') : '<tr><td colspan="9">No runs match these filters.</td></tr>';
   }
   function chart(id, points, metric, label) {
     const el = $(id);
@@ -72,9 +74,8 @@
     points.forEach((r,i) => {
       const title = `${r.name} | ${r.final ? 'Final' : 'Intermediate'} score: ${score(r.score)} | ${label}: ${metric === 'tokens' ? fmt(r.tokens) : fmt(r[metric])}`;
       svg += `<circle class="point" data-point="${i}" tabindex="0" role="img" aria-label="${esc(title)}" cx="${X(r[metric])}" cy="${Y(r.score)}" r="3.5" fill="${r.final ? colors[r.id] : 'var(--surface)'}" stroke="${colors[r.id]}" stroke-width="1.5" ${r.final ? '' : 'stroke-dasharray="3 2"'}></circle>`;
-      if (r.budgetLowerBound) svg += `<text x="${X(r[metric])+7}" y="${Y(r.score)-6}" fill="var(--muted)" font-size="11" aria-hidden="true">‡</text>`;
     });
-    el.innerHTML = `<p class="note">${points.length} scored run${points.length === 1 ? "" : "s"} plotted${points.some(r => r.budgetLowerBound) ? ` · ${points.filter(r => r.budgetLowerBound).length} budgets are recorded minimums (‡)` : ''}</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scientific score versus ${esc(label)}">${svg}</svg>`;
+    el.innerHTML = `<p class="note">${points.length} scored run${points.length === 1 ? "" : "s"} plotted</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scientific score versus ${esc(label)}">${svg}</svg>`;
     el.querySelectorAll('.point').forEach(point => {
       const r = points[Number(point.dataset.point)];
       const position = event => {
@@ -91,7 +92,7 @@
         const value = metric === 'cost' ? '$' + r.cost.toFixed(2) + ' API cost'
           : metric === 'time' ? fmt(r.time) + ' min elapsed'
           : metric === 'tokens' ? fmt(r.tokens) + ' total tokens' : fmt(r.calls) + ' model calls';
-        tooltip.innerHTML = `<strong>${esc(r.name)}</strong><div>${r.final ? 'Final' : 'Intermediate'} score: ${score(r.score)}</div><div>${r.budgetLowerBound ? '≥ ' : ''}${esc(value)}</div>${r.budgetLowerBound ? '<div class="note">‡ Last live snapshot; final budget unavailable</div>' : ''}`;
+        tooltip.innerHTML = `<strong>${esc(r.name)}</strong><div>${r.final ? 'Final' : 'Intermediate'} score: ${score(r.score)}</div><div>${r.budgetLowerBound ? '≥ ' : ''}${esc(value)}</div>${r.budgetLowerBound ? '<div class="note">Last recorded budget; final total unavailable</div>' : ''}`;
         tooltip.hidden = false;
         point.setAttribute('aria-describedby', 'point-tooltip');
         position(event);
@@ -121,6 +122,12 @@
     } catch (error) { $('refresh-status').textContent = `Could not refresh: ${error.message}. Showing last available data.`; }
     finally { loading = false; $('refresh').disabled = false; }
   }
-  ['task','owner','budget','partial'].forEach(id => $(id).addEventListener('change', render));
+  ['task','owner','budget','partial','incomplete'].forEach(id => $(id).addEventListener('change', render));
+  $('run-table').addEventListener('change', event => {
+    const input = event.target;
+    if (!input.matches('input[data-run-id]')) return;
+    if (input.checked) hiddenRuns.delete(input.dataset.runId); else hiddenRuns.add(input.dataset.runId);
+    render();
+  });
   $('refresh').addEventListener('click', load); load(); setInterval(load, 60000);
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -226,5 +226,6 @@ keeps that snapshot intact and exposes a separate `comparison_budget`. It prefer
 `<run_id>/final_usage.json` reconstructed from the final Inspect evaluation
 (`source: "final_inspect_eval"`, `cost_usd`, `n_model_calls`, `tokens_total`,
 `elapsed_s`, optional `ts`). Otherwise it uses the last complete live snapshot,
-explicitly marked as a lower bound (≥ / ‡) in comparison plots and tooltips.
+hidden by default behind “Include incomplete budgets” and explicitly labelled
+as a lower bound (≥) in the table and tooltip. Plot checkboxes hide individual runs.
 A recovered live budget must not be interpreted as the final run cost or duration.

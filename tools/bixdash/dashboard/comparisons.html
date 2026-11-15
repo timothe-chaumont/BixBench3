@@ -19,6 +19,7 @@
 <label>Owner<select id="owner" aria-label="Owner"></select></label>
 <label>Third chart X axis<select id="budget"><option value="calls">Model calls</option><option value="tokens">Total tokens</option></select></label>
 <label class="check"><input type="checkbox" id="partial">Include intermediate scores</label>
+<label class="check"><input type="checkbox" id="incomplete">Include incomplete budgets</label>
 <button id="refresh" type="button">Refresh</button>
 </div>
 <p class="note">Cost = estimated analyst API cost, excluding GCP and judges. Tokens = uncached input + cached input + output; reasoning tokens are already included in output. Model calls are API generations, not tool calls.</p>
@@ -27,9 +28,9 @@
 <section class="panel"><h2>Score vs API cost</h2><div id="cost-chart" class="chart"></div></section>
 <section class="panel"><h2>Score vs elapsed time</h2><div id="time-chart" class="chart"></div></section>
 <section class="panel"><h2 id="budget-heading">Score vs model calls</h2><div id="budget-chart" class="chart"></div></section>
-<section class="panel"><h2>Reading these plots</h2><p>Higher scores and lower budgets are better. Filled circles are final scores. Hollow circles are intermediate scores, when enabled.</p><p>Hover or focus a point for its run name and exact values. When final usage is missing, ‡ marks the last recorded budget: a lower bound paired with the final score. Runs with no recorded budget are omitted from that chart.</p><p>Points do not imply a learning curve. No intermediate scores are invented from the final result, and no line connects separate experiments.</p><p class="muted" id="coverage"></p></section>
+<section class="panel"><h2>Reading these plots</h2><p>Higher scores and lower budgets are better. Filled circles are final scores. Hollow circles are intermediate scores, when enabled.</p><p>Hover or focus a point for its run name and exact values. Complete final results are shown by default. Enable incomplete budgets to include recorded minimums, identified in the tooltip. Use the Plot checkboxes below to hide individual runs.</p><p>Points do not imply a learning curve. No intermediate scores are invented from the final result, and no line connects separate experiments.</p><p class="muted" id="coverage"></p></section>
 </div>
-<div class="table-scroll"><table><thead><tr><th>Run</th><th>Task / owner</th><th>Score</th><th>API cost</th><th>Elapsed</th><th>Model calls</th><th>Total tokens</th><th>Status</th></tr></thead><tbody id="run-table"></tbody></table></div>
+<div class="table-scroll"><table><thead><tr><th>Plot</th><th>Run</th><th>Task / owner</th><th>Score</th><th>API cost</th><th>Elapsed</th><th>Model calls</th><th>Total tokens</th><th>Status</th></tr></thead><tbody id="run-table"></tbody></table></div>
 </main>
 <div id="point-tooltip" class="point-tooltip" role="tooltip" hidden></div>
 </body></html>
