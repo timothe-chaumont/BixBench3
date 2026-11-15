@@ -39,3 +39,19 @@ def test_top2_tie_is_not_guaranteed_retention():
     r = analysis.compare(x, y)
     assert not r["full_winner_in_lite_top2"]
     assert len(r["lite_top2_including_ties"]) == 3
+
+
+def test_nested_critic_model_call_is_counted_once():
+    from types import SimpleNamespace
+
+    p = Path(__file__).resolve().parents[2] / "tools/proxy_study/record_metrics.py"
+    spec = importlib.util.spec_from_file_location("proxy_metrics", p)
+    metrics = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(metrics)
+    pending = SimpleNamespace(uuid="critic", event="model", pending=True, events=[])
+    finished = SimpleNamespace(uuid="critic", event="model", pending=False, events=[])
+    outer = SimpleNamespace(uuid="tool", event="tool", events=[pending, finished])
+    flat = metrics.flattened_events([outer, finished])
+    calls = [e for e in flat if e.event == "model" and not e.pending]
+    assert len(calls) == 1
+    assert len(flat) == 2

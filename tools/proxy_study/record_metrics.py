@@ -9,6 +9,22 @@ from inspect_ai.log import read_eval_log
 PRICES = {"openai/gpt-5.4-mini": (0.75, 0.075, 4.5), "gpt-5.4-mini": (0.75, 0.075, 4.5)}
 
 
+def flattened_events(events):
+    """Count nested critic calls once, preferring a completed event over a pending copy."""
+    unique = {}
+
+    def visit(items):
+        for event in items:
+            key = getattr(event, "uuid", None) or id(event)
+            previous = unique.get(key)
+            if previous is None or not getattr(event, "pending", False):
+                unique[key] = event
+            visit(getattr(event, "events", None) or [])
+
+    visit(events)
+    return list(unique.values())
+
+
 def summarize(root):
     root = Path(root)
     files = sorted((root / "inspect_logs").glob("*.eval"))
@@ -36,7 +52,8 @@ def summarize(root):
         tokens["cached"] += u.input_tokens_cache_read or 0
         tokens["output"] += u.output_tokens
         tokens["reasoning"] += u.reasoning_tokens or 0
-    events = sample.events or []
+    top_events = sample.events or []
+    events = flattened_events(top_events)
     start = datetime.fromisoformat(sample.started_at.replace("Z", "+00:00"))
     end = datetime.fromisoformat(sample.completed_at.replace("Z", "+00:00"))
     grade = json.loads((root / "grade.json").read_text()) if (root / "grade.json").exists() else {}
@@ -51,6 +68,10 @@ def summarize(root):
         "unknown_price_models": unknown,
         "tokens": tokens,
         "tokens_total": sum(tokens[k] for k in ["input", "cached", "output"]),
+        "n_top_level_model_calls": sum(
+            getattr(e, "event", None) == "model" and not getattr(e, "pending", False)
+            for e in top_events
+        ),
         "n_model_calls": sum(
             getattr(e, "event", None) == "model" and not getattr(e, "pending", False)
             for e in events
