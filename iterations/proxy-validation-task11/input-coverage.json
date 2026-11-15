@@ -1,0 +1,14 @@
+{
+  "n_libraries": 85,
+  "n_probes": 30146,
+  "all_probe_names_match_manifest": true,
+  "full_original_input_bytes": 15827383832,
+  "full_categories_bytes": {
+    "metadata": 4295889,
+    "raw_data": 15823087943
+  },
+  "lite_exposed_input_bytes": 13729343,
+  "original_input_bytes_divided_by_lite": 1152.814364969977,
+  "provided_count_sha256": "a3cdfdb74bf872e56006ac9313bc9af2609e5471d7cda5c347c648e27cc59209",
+  "all_original_metadata_retained": true
+}
