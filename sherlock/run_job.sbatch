@@ -33,9 +33,11 @@ mkdir -p "$JOB" "$SRC" "$JOB/jaildir" "$JOB/jaillog" "$JOB/squidlog" "$JOB/xdg" 
 (umask 077 && mkdir -p "$SECRETS")
 COLLECTOR=""
 HOSTEXEC=""
+RELAY=""
 cleanup() {
   [ -n "$COLLECTOR" ] && kill "$COLLECTOR" 2>/dev/null
   [ -n "$HOSTEXEC" ] && kill "$HOSTEXEC" 2>/dev/null
+  [ -n "$RELAY" ] && kill "$RELAY" 2>/dev/null
   rm -rf "$SECRETS"
 }
 trap cleanup EXIT
@@ -48,9 +50,20 @@ DATA_DIR=$SCRATCH/bixbench3/data/$PAPER/data
 echo "[sherlock] job $SLURM_JOB_ID on $(hostname) partition ${SLURM_JOB_PARTITION:-?} cpus ${SLURM_CPUS_PER_TASK:-?} run $RUN_ID"
 test -f "$DATA_DIR/../.bixbench3-ready.json" || { echo "task data not staged: $DATA_DIR (run setup.sbatch)"; exit 2; }
 
-# --- secrets (only the keys the run needs; same file format as the GCP /dev/shm/bixbench3.env)
-(umask 077 && sed -n 's/^export //; /^OPENAI_API_KEY=/p' "$HOME/.bixbench3_secrets" > "$SECRETS/bixbench3.env")
-test -s "$SECRETS/bixbench3.env" || { echo "OPENAI_API_KEY missing from ~/.bixbench3_secrets"; exit 2; }
+# --- secrets: OpenAI access goes through a per-job key relay (sherlock/key_relay.py) that switches from
+# OPENAI_API_KEY to OPENAI_API_KEY_2, _3 ... in ~/.bixbench3_secrets when a key runs out, without
+# interrupting the run. The run only sees a random per-job token and OPENAI_BASE_URL; real keys stay
+# in the relay. Same file format as the GCP /dev/shm/bixbench3.env.
+grep -Eq '^(export )?OPENAI_API_KEY=.' "$HOME/.bixbench3_secrets" || { echo "OPENAI_API_KEY missing from ~/.bixbench3_secrets"; exit 2; }
+RELAY_PORT=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1])')
+RELAY_TOKEN=$(python3 -c 'import secrets;print("bb3relay-" + secrets.token_hex(24))')
+BB3_RELAY_TOKEN=$RELAY_TOKEN BB3_ROTATION_LOG=$BB3/logs/key_rotation.log \
+  python3 "$REPO/sherlock/key_relay.py" "$RELAY_PORT" > "$JOB/key_relay.log" 2>&1 &
+RELAY=$!
+for _ in $(seq 20); do python3 -c 'import socket,sys;socket.create_connection(("127.0.0.1",int(sys.argv[1])),1)' "$RELAY_PORT" 2>/dev/null && break; sleep 0.5; done
+kill -0 "$RELAY" 2>/dev/null || { echo "key relay did not start"; cat "$JOB/key_relay.log"; exit 2; }
+(umask 077 && printf 'OPENAI_API_KEY=%s\nOPENAI_BASE_URL=http://127.0.0.1:%s/v1\n' "$RELAY_TOKEN" "$RELAY_PORT" > "$SECRETS/bixbench3.env")
+echo "[sherlock] $(tail -1 "$JOB/key_relay.log" | cut -d' ' -f4-)"
 
 # --- source tree = runtime checkout (HEAD) + optional committed harness overlay (as on GCP)
 (cd "$REPO" && git archive --format=tar HEAD) | tar -x -C "$SRC" || { echo "source tree export failed"; exit 2; }
@@ -254,7 +267,7 @@ DEST=$SCRATCH/bixbench3/runs/$RUN_ID
 keep_copy() {  # keep_copy [quick]: quick = local copy only (must fit in Slurm's 30 s KillWait)
   mkdir -p "$DEST/sherlock"
   rsync -a --exclude workspace "$RUN_ROOT/" "$DEST/"
-  cp -a "$JOB/gateway.log" "$JOB/collector.log" "$JOB/hostexec.log" "$JOB/sandbox.json" "$JOB/supervisor.py" "$JOB/sandbox_image.json" "$JOB/task_env_build.log" "$DEST/sherlock/" 2>/dev/null
+  cp -a "$JOB/gateway.log" "$JOB/collector.log" "$JOB/hostexec.log" "$JOB/key_relay.log" "$JOB/sandbox.json" "$JOB/supervisor.py" "$JOB/sandbox_image.json" "$JOB/task_env_build.log" "$DEST/sherlock/" 2>/dev/null
   cp -a "$JOB/jaillog" "$JOB/squidlog" "$JOB/bixdash" "$DEST/sherlock/" 2>/dev/null
   cp -a "$XDG_DATA_HOME/inspect_ai/samplebuffer" "$DEST/sherlock/" 2>/dev/null
   echo "[sherlock] results kept in $DEST"

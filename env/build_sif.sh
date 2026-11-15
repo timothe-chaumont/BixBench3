@@ -23,7 +23,9 @@ rm -f "$DEF"
 # offline check BEFORE publishing: proxies point at a closed port so any network access fails
 VERIFY="bash /opt/task-env/verify_env.sh"
 [ "$TASK" = task11 ] && VERIFY="micromamba run -n task11 Rscript /opt/task-env/verify_env.R"
-if ! apptainer exec --containall --env "HTTP_PROXY=http://127.0.0.1:9,HTTPS_PROXY=http://127.0.0.1:9,http_proxy=http://127.0.0.1:9,https_proxy=http://127.0.0.1:9" \
+# --workdir: node-local /tmp like the run sandbox (the default --containall session tmpfs is too small for R/SQLite)
+mkdir -p "$APPTAINER_TMPDIR/verify-work"
+if ! apptainer exec --containall --workdir "$APPTAINER_TMPDIR/verify-work" --env "HTTP_PROXY=http://127.0.0.1:9,HTTPS_PROXY=http://127.0.0.1:9,http_proxy=http://127.0.0.1:9,https_proxy=http://127.0.0.1:9" \
      "$OUT_SIF.tmp" bash -c "$VERIFY"; then
   mv "$OUT_SIF.tmp" "$OUT_SIF.failed"
   echo "verification failed; image kept for debugging as $OUT_SIF.failed" >&2
