@@ -20,3 +20,14 @@
   `subagent_effort` in `broker_logs/subagents_summary.json`.
 - **Tested** with Inspect's mock model: run_subagents runs 2 sub-agents concurrently (max_parallel_seen 2), reports return
   in order, orchestrator calls at xhigh and sub-agent calls at medium with max_retries inherited.
+
+## Fix after the first smoke test (job 52428638)
+
+The level-1 sub-agent ran `hisat2-build` in the foreground of its shell; its warnings flooded the
+output, Inspect kept only the last 10 MiB of the tool-support reply, and the truncated JSON
+(`ValidationError: JSONRPCResponse`) ended the sub-agent after 20 minutes. Two changes:
+
+- sub-agent `bash_session` and `python` are wrapped (`_robust`): an unreadable reply becomes a
+  `ToolError` with recovery advice instead of ending the sub-agent;
+- one instruction line: run long or verbose programs with output redirected to a log file and
+  read it with `tail` / `grep`.
