@@ -84,3 +84,36 @@ def test_compute_estimate_excludes_stopped_cpu_but_retains_disk_charge():
         result["components_usd"]["two_retained_200gib_boot_disks_usd"]
         == 3 * 400 * compute.STANDARD_GIB_H
     )
+
+
+def test_retry_preserves_failed_staging_before_restaging(tmp_path, monkeypatch):
+    import json
+
+    p = Path(__file__).resolve().parents[2] / "tools/proxy_study/launch.py"
+    spec = importlib.util.spec_from_file_location("proxy_launcher", p)
+    launcher = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(launcher)
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    (inputs / "original-prompt.md").write_text(
+        "## Method Guidance\nUse DESeq2 1.28.1.\n## Required Outputs\nOriginal outputs.\n"
+    )
+    work = tmp_path / "job"
+    work.mkdir()
+
+    def stage(_original, destination):
+        assert not destination.exists()
+        destination.mkdir()
+        (destination / "case.json").write_text(
+            json.dumps({"prompt": {"prompt_path": "prompt.md"}, "expected_outputs": []})
+        )
+        (destination / "prompt.md").write_text("Original prompt")
+
+    monkeypatch.setattr(launcher.gcp, "stage_hf_case", stage)
+    launcher.prepare_case(work, inputs, None, "full")
+    (work / "dataset/debug-marker.txt").write_text("Failed-attempt evidence")
+    launcher.prepare_case(work, inputs, None, "full")
+    saved = list((work / "staging_attempts").glob("*/debug-marker.txt"))
+    assert len(saved) == 1
+    assert saved[0].read_text() == "Failed-attempt evidence"
+    assert not (work / "dataset/debug-marker.txt").exists()
