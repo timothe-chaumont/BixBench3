@@ -434,7 +434,10 @@ def with_capture(tool_object: Tool, author: str) -> Tool:
     """The same tool, plus capture of read-only inspections into the run memory."""
     definition = ToolDef(tool_object)
 
-    async def wrapped(**arguments: Any) -> Any:
+    # Inspect passes the model's tool arguments through unchanged only to a `**kwargs: Any`
+    # parameter (model._call_tools.tool_params); any other name receives them as one argument.
+    async def wrapped(**kwargs: Any) -> Any:
+        arguments = kwargs
         result = await definition.tool(**arguments)
         try:
             await capture_call(definition.name, arguments, result, author)
