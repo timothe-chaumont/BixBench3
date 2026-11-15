@@ -10,9 +10,9 @@ DNA-damage enrichment. The official score is the mean artifact score. Model: GPT
 |---|---|---|---|
 | GCP, 8 vCPU / 32 GB | 1 | 0.589 | [`iterations/baseline-task11`](../../iterations/baseline-task11/) |
 | GCP, 6 vCPU / 32 GB | 1 | 0.679 | [`iterations/baseline-task11-6vcpu`](../../iterations/baseline-task11-6vcpu/) |
-| **Sherlock, 6 CPU / 32 GB, AMD EPYC 7502** | **4** | **0.630 ± 0.069** (0.654, 0.567, 0.661, 0.636) | [`exp/t11-baseline`](../../../../tree/exp/t11-baseline) |
+| **Sherlock, 6 CPU / 32 GB, AMD EPYC 7502** | **4** | **0.630 ± 0.069** (0.654, 0.567, 0.661, 0.636) | [`exp/t11-baseline`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t11-baseline) |
 
-The Sherlock runner ([`sherlock/runner`](../../../../tree/sherlock/runner)) runs the unchanged harness on Stanford's HPC
+The Sherlock runner ([`sherlock/runner`](https://github.com/timothe-chaumont/BixBench3/tree/sherlock/runner)) runs the unchanged harness on Stanford's HPC
 cluster with the GCP VM shape. It took several fixes to reach parity:
 
 - **apt:** apt runs as root inside the fakeroot sandbox.
@@ -28,11 +28,11 @@ inside the Sherlock 95% CI.
 
 | Variant | Branch | Idea | Score | Status |
 |---|---|---|---|---|
-| v2f enrichment validator | [`exp/v2f`](../../../../tree/exp/v2f) | Contract and method checks on the 3 enrichment files; `submit()` refuses serious problems at most twice | 0.582 | completed |
-| v3c enrichment precision | [`exp/v3c`](../../../../tree/exp/v3c) | Note applying the hypergeometric guidance strictly (canonical sets, 5–500 size filter, tested-gene background) | 0.592 | completed |
-| v3a named-tool repair | [`exp/v3a`](../../../../tree/exp/v3a) | Note on installing PIANO in a separate R 4.0 environment | – | cancelled (moved to Sherlock) |
-| v3b reference-resource repair | [`exp/v3b`](../../../../tree/exp/v3b) | Note on requesting web access to the Ensembl 100 archive | – | cancelled (moved to Sherlock) |
-| v3d statistical-background repair | [`exp/v3d`](../../../../tree/exp/v3d) | Note on the DNA-damage enrichment background and correction | – | cancelled (moved to Sherlock) |
+| v2f enrichment validator | [`exp/v2f`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v2f) | Contract and method checks on the 3 enrichment files; `submit()` refuses serious problems at most twice | 0.582 | completed |
+| v3c enrichment precision | [`exp/v3c`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v3c) | Note applying the hypergeometric guidance strictly (canonical sets, 5–500 size filter, tested-gene background) | 0.592 | completed |
+| v3a named-tool repair | [`exp/v3a`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v3a) | Note on installing PIANO in a separate R 4.0 environment | – | cancelled (moved to Sherlock) |
+| v3b reference-resource repair | [`exp/v3b`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v3b) | Note on requesting web access to the Ensembl 100 archive | – | cancelled (moved to Sherlock) |
+| v3d statistical-background repair | [`exp/v3d`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v3d) | Note on the DNA-damage enrichment background and correction | – | cancelled (moved to Sherlock) |
 
 Per-artifact scores of the completed runs:
 

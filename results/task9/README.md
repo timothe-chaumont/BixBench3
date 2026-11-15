@@ -13,10 +13,10 @@ grader. The task score is the paper's: the share of the 14 artifacts with a grad
 
 | Version | Branch | Task score (pass rate), mean ± 95% CI | Mean artifact score | Best / worst run | Cost / run | Time / run | Failure tags / run |
 |---|---|---|---|---|---|---|---|
-| Baseline | [`exp/t9-baseline`](../../../../tree/exp/t9-baseline) | 0.39 ± 0.22 | 0.57 | 0.50 / 0.07 | $2.91 | 2.8 h | 2.4 |
-| + Preinstalled env | [`exp/t9-env`](../../../../tree/exp/t9-env) | 0.57 ± 0.45 | 0.69 | 0.93 / 0.07 | $2.08 | 1.8 h | 0.6 |
-| **+ Env + Artifact reviewer** | [`exp/t9-env-reviewer`](../../../../tree/exp/t9-env-reviewer) | **0.76 ± 0.29** | **0.83** | **0.93 / 0.50** | $2.24 | 1.8 h | 0.4 |
-| + Env + Sub-agents (v4) | [`exp/t9-env-subagents`](../../../../tree/exp/t9-env-subagents) | 0.46 ± 0.05 | 0.66 | 0.50 / 0.43 | $10.14 | 5.7 h | 1.0 † |
+| Baseline | [`exp/t9-baseline`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-baseline) | 0.39 ± 0.22 | 0.57 | 0.50 / 0.07 | $2.91 | 2.8 h | 2.4 |
+| + Preinstalled env | [`exp/t9-env`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env) | 0.57 ± 0.45 | 0.69 | 0.93 / 0.07 | $2.08 | 1.8 h | 0.6 |
+| **+ Env + Artifact reviewer** | [`exp/t9-env-reviewer`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer) | **0.76 ± 0.29** | **0.83** | **0.93 / 0.50** | $2.24 | 1.8 h | 0.4 |
+| + Env + Sub-agents (v4) | [`exp/t9-env-subagents`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents) | 0.46 ± 0.05 | 0.66 | 0.50 / 0.43 | $10.14 | 5.7 h | 1.0 † |
 | *Paper: GPT-5.4 Mini, task 9* | – | *0.71 (one run)* | *not reported* | – | *$8.47 (mean over all 20 tasks)* | – | *3.25 (all tasks)* |
 
 † Judged on the full logs. See [the judge blind spot](#3-the-official-process-judge-cannot-see-sub-agents) below.
@@ -129,11 +129,11 @@ PDFs sit next to each PNG.
 
 | Version | Branch | Idea |
 |---|---|---|
-| + Env + Reviewer + past.dev | [`exp/t9-env-reviewer-pastdev`](../../../../tree/exp/t9-env-reviewer-pastdev) | The reviewer also sees the tables it already accepted in this run, for cross-table format consistency |
-| + Env + Dual reviewer + past.dev | [`exp/t9-env-reviewer-dual-pastdev`](../../../../tree/exp/t9-env-reviewer-dual-pastdev) | Local reviewer plus a consistency reviewer with a rolling run memory; both must accept |
-| + Env + Sub-agents v5 | [`exp/t9-env-subagents-v5`](../../../../tree/exp/t9-env-subagents-v5) | The cost fixes from finding 4 |
-| + Env + Sub-agents + past.dev | [`exp/t9-env-subagents-pastdev`](../../../../tree/exp/t9-env-subagents-pastdev) | v4 plus a shared past.dev memory of inspections, files and conventions |
-| + Env + Sub-agents v5 + past.dev | [`exp/t9-env-subagents-v5-pastdev`](../../../../tree/exp/t9-env-subagents-v5-pastdev) | Both of the above |
+| + Env + Reviewer + past.dev | [`exp/t9-env-reviewer-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-pastdev) | The reviewer also sees the tables it already accepted in this run, for cross-table format consistency |
+| + Env + Dual reviewer + past.dev | [`exp/t9-env-reviewer-dual-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-dual-pastdev) | Local reviewer plus a consistency reviewer with a rolling run memory; both must accept |
+| + Env + Sub-agents v5 | [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | The cost fixes from finding 4 |
+| + Env + Sub-agents + past.dev | [`exp/t9-env-subagents-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-pastdev) | v4 plus a shared past.dev memory of inspections, files and conventions |
+| + Env + Sub-agents v5 + past.dev | [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | Both of the above |
 
 ## Method notes and caveats
 
