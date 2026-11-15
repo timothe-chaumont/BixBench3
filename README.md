@@ -1,14 +1,85 @@
-# BixBench3 — experiments and adapted runner
+# Harness engineering for AI scientists on BixBench3
 
-Shared team setup: **[6 vCPU + live dashboard](TEAM_SETUP.md)**.
+**AI Research Hackathon, Track 3: AI Scientist Swarms.** [BixBench3](https://arxiv.org/abs/2608.25286) asks whether an AI
+agent can reproduce a published computational-biology study from the raw public data: align the reads, count, run
+DE and enrichment, and produce exact output tables that are graded against the paper's artifacts. The best model in the
+paper averages 0.48. Our question: **with a fixed, cheap model (GPT-5.4 Mini), which changes to the agent's harness and
+environment actually raise the score, and at what cost?** Each version runs 5 times, because single runs of the same
+setup range from 0.07 to 0.93.
 
-Run records: [iterations](iterations/). Adapted task 11 setup: [ADAPTED_RUNNER.md](ADAPTED_RUNNER.md).
+![Task 9 headline results](results/task9/figures/headline.png)
 
-The upstream baseline is commit `d0e0bbb41222335b1b8878f533a58466a3a782dc`, included in this branch history.
+### Main results (task 9, Tag-Seq REST knockout, 14 artifacts, 5 runs per version)
+
+- **A format reviewer nearly doubles the score, at no extra cost.** Before a table is published, a second call to the
+  same model checks its format against the artifact's specification. It never sees ground truth. The task score rises
+  from **0.39 to 0.76** (p = 0.024, exact permutation test), above the paper's GPT-5.4 Mini result on this task (0.71). No
+  reviewer run falls below 0.50, and the cost is **$2.24 per run** against $2.91.
+- **A preinstalled task environment cuts cost and failures, but not the variance.** Runs get a third cheaper and faster,
+  and failure-mode tags drop from 2.4 to 0.6 per run. The score now spans 0.07 to 0.93: what remains is scientific
+  choices, not tooling.
+- **Sub-agent swarms cost 3.5× more for no gain.** A per-artifact sub-agent design costs $10 per run and takes 5.7 h,
+  with no score improvement. A trace audit shows that 36% of one run's cost went on 268 polling calls during a single
+  index build. These findings shaped the v5 design and the past.dev shared-memory variants, which are running now.
+- **The official process judge cannot see sub-agents.** It reads only the top-level transcript and gave **0 failure
+  tags** to every sub-agent run, while the sub-agents made up to 1,757 tool calls it never saw. Re-judged on the full
+  trace, every run is tagged. Process grading of multi-agent systems needs the full trace.
+- **One ambiguous prompt sentence explains most of the error left in the T98G artifacts.** *"Run DESeq2 separately by cell
+  line and clone contrast"* leads most agents to fit 2-vs-2 models. The reference uses one model per cell line, and the
+  error compounds into the GO artifacts.
+
+| Task 9 version | Task score (5 runs) | Cost / run | Time / run |
+|---|---|---|---|
+| Baseline | 0.39 ± 0.22 | $2.91 | 2.8 h |
+| + Preinstalled env | 0.57 ± 0.45 | $2.08 | 1.8 h |
+| **+ Env + Artifact reviewer** | **0.76 ± 0.29** | **$2.24** | **1.8 h** |
+| + Env + Sub-agents | 0.46 ± 0.05 | $10.14 | 5.7 h |
+| *Paper, GPT-5.4 Mini (1 run)* | *0.71* | *$8.47 (all-task mean)* | |
+
+**Full analysis, all figures and caveats: [results/task9](results/task9/).** Task 11 results and the Sherlock/GCP parity
+check: [results/task11](results/task11/). Task 11 "lite" proxy study: [iterations/proxy-validation-task11](iterations/proxy-validation-task11/).
+
+### Infrastructure we built
+
+- **Sherlock runner** ([`sherlock/runner`](https://github.com/timothe-chaumont/BixBench3/tree/sherlock/runner)): runs the unchanged benchmark on Stanford's HPC cluster
+  with the GCP VM shape (6 CPU / 32 GB, one CPU generation). Sandbox parity fixes: root apt, memory and CPU views,
+  isolation from host processes. A key relay switches OpenAI keys mid-run without interrupting the agent. About 25 runs
+  of 6 CPU can run at once, against 5 on a 32-vCPU GCP quota.
+- **Preinstalled task environments** ([`feat/task-envs-sherlock`](https://github.com/timothe-chaumont/BixBench3/tree/feat/task-envs-sherlock)): per-task images with the
+  tool versions the method asks for.
+- **Live dashboard** ([`tools/bixdash`](tools/bixdash/)): every run's phase, cost and score, shared across the team.
+- **6 vCPU team profile** ([TEAM_SETUP.md](TEAM_SETUP.md)) and the adapted GCP runner ([ADAPTED_RUNNER.md](ADAPTED_RUNNER.md)).
+
+### Branch map
+
+Each experiment lives on its own branch: one branch per task × version, and repeats of the same code share a branch.
+Each branch has `experiments/<version>.md` describing exactly what changed. Branches with finished runs also have a
+`RESULTS.md`.
+
+| Branch | What it is | Status |
+|---|---|---|
+| `main` | Benchmark code, shared team setup, results ([results/](results/)), run records ([iterations/](iterations/)) | |
+| [`exp/t9-baseline`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-baseline) | Task 9 baseline on Sherlock | 5 runs, done |
+| [`exp/t9-env`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env) | + preinstalled task 9 environment | 5 runs, done |
+| [`exp/t9-env-reviewer`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer) | + artifact format reviewer (**best**) | 5 runs, done |
+| [`exp/t9-env-subagents`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents) | + orchestrator and sub-agents (v4) | 5 runs, done |
+| [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | Sub-agents v5: cost fixes | running |
+| [`exp/t9-env-subagents-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-pastdev) | Sub-agents + past.dev shared run memory | running |
+| [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | Sub-agents v5 + past.dev | running |
+| [`exp/t9-env-reviewer-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-pastdev) | Reviewer with memory of the tables it accepted | running |
+| [`exp/t9-env-reviewer-dual-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-dual-pastdev) | Local reviewer + consistency reviewer with memory | running |
+| [`exp/t11-baseline`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t11-baseline) | Task 11 baseline on Sherlock | 4 runs, done |
+| [`exp/t11-v4-dag-orchestrator`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t11-v4-dag-orchestrator) | First sub-agent orchestrator (source of t9 v4) | code only |
+| [`exp/v2f`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v2f), [`exp/v3a`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v3a)–[`v3e`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v3e) | Task 11 batch 1 harness variants on GCP | single runs, see [results/task11](results/task11/) |
+| [`sherlock/runner`](https://github.com/timothe-chaumont/BixBench3/tree/sherlock/runner), [`feat/task-envs-sherlock`](https://github.com/timothe-chaumont/BixBench3/tree/feat/task-envs-sherlock) | Sherlock runner; per-task environment images | infrastructure |
+| [`setup/adapted-runner`](https://github.com/timothe-chaumont/BixBench3/tree/setup/adapted-runner), [`tools/bixdash`](https://github.com/timothe-chaumont/BixBench3/tree/tools/bixdash) | Earlier snapshots of the runner and dashboard, now merged into `main` | archived |
+
+Original project notes: shared team setup **[6 vCPU + live dashboard](TEAM_SETUP.md)**. Upstream baseline commit
+`d0e0bbb41222335b1b8878f533a58466a3a782dc`, included in this branch history.
 
 ---
 
-# BixBench3
+# BixBench3 (upstream documentation)
 
 BixBench3 evaluates whether AI agents can reproduce research-scale computational biology analyses from public raw data. Each task supplies a biological objective, method guidance, raw inputs, and exact structured output contracts. Agents run on a GCP VM, analyze the data, and produce the required artifacts. Agent artifacts are graded deterministically against published ground truth artifacts, and a PhDval-compatible process judge scores instruction following, transparency, analytical rigor, and run-level failure modes.
 
