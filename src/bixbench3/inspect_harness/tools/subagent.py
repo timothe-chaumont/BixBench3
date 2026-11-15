@@ -32,14 +32,17 @@ import json
 import os
 import re
 from datetime import UTC, datetime
+from json import JSONDecodeError
 from pathlib import Path
+from typing import Any
 
 import anyio
 from inspect_ai.agent import AgentSubmit, react, run
 from inspect_ai.model import GenerateConfig, Model, get_model
 from inspect_ai.model._generate_config import active_generate_config
-from inspect_ai.tool import Tool, ToolError, bash_session, python, text_editor, tool
+from inspect_ai.tool import Tool, ToolDef, ToolError, bash_session, python, text_editor, tool
 from inspect_ai.util import message_limit, store
+from pydantic import ValidationError
 
 from .web_access import request_web_access
 
@@ -66,6 +69,8 @@ Rules:
   single command, staying under the 10-minute tool timeout), then check once. Never check a job's
   status more often than every 5 minutes, and never with a series of short calls.
 - Reading: inspect tables with `head`, `wc -l`, `cut` or `grep`; never print or open whole tables.
+  Run long or verbose programs (index builds, aligners, installers) with their output redirected to a
+  log file (`cmd > step.log 2>&1`), then read the log with `tail` or `grep`.
   Run shared scripts instead of reading them; open a script only if you must change it.
 - Save every script you run in your output folder, so the work can be audited and re-run.
 - If something blocks you, try reasonable fixes; if you still cannot finish, stop and report
@@ -132,10 +137,40 @@ def subagent_model() -> Model:
     return get_model(str(active), config=config, **(getattr(active, "model_args", None) or {}))
 
 
+UNREADABLE_REPLY = (
+    "The tool's reply could not be read (usually because the command printed more than about 10 MB). "
+    "The command may still be running or may have finished: check its state and outputs with a short "
+    "command. Redirect long or verbose output to a log file (`cmd > step.log 2>&1`) and read it with "
+    "`tail` or `grep`."
+)
+
+
+def _robust(tool_object: Tool) -> Tool:
+    """The same tool, but an unreadable sandbox reply becomes a ToolError the agent can recover from.
+
+    Inspect keeps only the last 10 MiB of a sandbox command's output (Docker and Sherlock alike);
+    a flood of output (e.g. hisat2-build warnings) truncates the tool-support JSON reply, and the
+    resulting ValidationError would otherwise end the whole sub-agent.
+    """
+    definition = ToolDef(tool_object)
+
+    async def wrapped(**kwargs: Any) -> Any:  # must be **kwargs: Any (Inspect's tool_params passes arguments through)
+        try:
+            return await definition.tool(**kwargs)
+        except (ValidationError, JSONDecodeError) as error:
+            raise ToolError(UNREADABLE_REPLY) from error
+
+    return ToolDef(
+        wrapped, name=definition.name, description=definition.description, parameters=definition.parameters,
+        parallel=definition.parallel, viewer=definition.viewer, model_input=definition.model_input,
+        options=definition.options,
+    ).as_tool()
+
+
 def _sub_tools(depth: int, number: int) -> list[Tool]:
     tools: list[Tool] = [
-        bash_session(timeout=600, instance=f"subagent-{number}"),  # own shell: no shared cwd/jobs
-        python(timeout=600),
+        _robust(bash_session(timeout=600, instance=f"subagent-{number}")),  # own shell: no shared cwd/jobs
+        _robust(python(timeout=600)),
         text_editor(timeout=120),
         request_web_access(),
     ]
