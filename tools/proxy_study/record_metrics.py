@@ -59,6 +59,10 @@ def summarize(root):
     grade = json.loads((root / "grade.json").read_text()) if (root / "grade.json").exists() else {}
     artifacts = {a["artifact_id"]: a.get("score", 0.0) for a in grade.get("artifacts", [])}
     downstream = {k: v for k, v in artifacts.items() if k != "tempo_seq_filtered_counts"}
+    expected = json.loads((root / "dataset/case.json").read_text())["expected_outputs"]
+    grade_complete = {item["artifact_id"] for item in expected} == set(artifacts) and grade.get(
+        "score"
+    ) is not None
     limit = sample.limit.model_dump(mode="json") if sample.limit else None
     error = sample.error.model_dump(mode="json") if sample.error else None
     out = {
@@ -89,10 +93,11 @@ def summarize(root):
         "downstream_score": sum(downstream.values()) / 4 if len(downstream) == 4 else None,
         "count_score": artifacts.get("tempo_seq_filtered_counts"),
         "artifacts_present": sum(
-            (root / "outputs" / Path(a["path"]).name).is_file()
-            for a in json.loads((root / "dataset/case.json").read_text())["expected_outputs"]
+            (root / "outputs" / Path(a["path"]).name).is_file() for a in expected
         ),
-        "scientifically_valid": error is None or limit is not None,
+        "grading_complete": grade_complete,
+        "needs_regrading": not grade_complete,
+        "scientifically_valid": (error is None or limit is not None) and grade_complete,
     }
     (root / "study_metrics.json").write_text(json.dumps(out, indent=2) + "\n")
     (root / "final_usage.json").write_text(json.dumps(out, indent=2) + "\n")
