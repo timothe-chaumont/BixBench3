@@ -31,6 +31,7 @@ import asyncio
 import json
 import os
 import shlex
+import shutil
 import socket
 import tempfile
 import time
@@ -205,10 +206,13 @@ class ApptainerSandboxEnvironment(SandboxEnvironment):
         cfg = _load_config(config)
         gateway = await _start_gateway(cfg) if cfg.get("gateway") else None
         instance = f"bb3-{os.getpid()}-{uuid.uuid4().hex[:8]}"
-        overlay = Path(cfg["overlay_dir"])
+        # One writable layer and /tmp per sample attempt, like a fresh container per attempt on GCP
+        # (an Inspect sample retry must not inherit the dead attempt's root fs, /tmp or tool sockets).
+        base = Path(cfg["overlay_dir"])
+        overlay = base / instance
         overlay.mkdir(parents=True, exist_ok=True)
         # --containall would put /tmp and /var/tmp on a small session tmpfs; use node-local disk
-        workdir = Path(cfg.get("workdir_dir") or overlay.parent / "apptainer-workdir")
+        workdir = Path(cfg.get("workdir_dir") or base.parent / "apptainer-workdir") / instance
         workdir.mkdir(parents=True, exist_ok=True)
         fd, env_file = tempfile.mkstemp(prefix="bb3-env-", suffix=".env")
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
@@ -247,6 +251,10 @@ class ApptainerSandboxEnvironment(SandboxEnvironment):
             sandbox = environment.as_type(ApptainerSandboxEnvironment)
             await _run_clean(sandbox.cfg, ["apptainer", "instance", "stop", "--force", sandbox.instance], timeout=120)
             Path(sandbox.env_file).unlink(missing_ok=True)
+            base = Path(sandbox.cfg["overlay_dir"])
+            for path in (base / sandbox.instance,
+                         Path(sandbox.cfg.get("workdir_dir") or base.parent / "apptainer-workdir") / sandbox.instance):
+                await asyncio.to_thread(shutil.rmtree, path, True)  # free node-local disk; errors ignored
             await _stop_process(sandbox.gateway)
 
     @classmethod
