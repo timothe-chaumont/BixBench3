@@ -123,7 +123,8 @@ def present(runs):
 
 
 def label_n(label, n):
-    return label.replace(" + ", "\n+ ").lstrip("\n") + f"\n(n={n})"
+    tag = f"(n={n})" if n >= 5 else f"(n={n} of 5,\npreliminary)"
+    return label.replace(" + ", "\n+ ").lstrip("\n") + "\n" + tag
 
 
 def save(fig, name):
@@ -137,7 +138,13 @@ def mode_of(tag: str) -> str:
 
 
 # ---- Figure A/B: failure modes ---------------------------------------------------------
+def judged(c, rs):
+    """Sub-agent versions: only runs re-judged on the full logs count (the official judge only sees the orchestrator)."""
+    return [r for r in rs if "subagents" not in c or r.get("judge_source") == "full_logs"]
+
+
 def fig_failure_modes(runs):
+    runs = {c: judged(c, rs) for c, rs in runs.items()}
     vers = present(runs)
     per_run = {}  # version -> {mode: mean tags per run}
     for c, _ in vers:
@@ -272,7 +279,7 @@ def fig_heatmap(runs, metric: str):
 # ---- Figure D: task score per run + mean and 95% CI ---------------------------------------
 def fig_task_scores(runs):
     vers = present(runs)
-    fig, axes = plt.subplots(1, 2, figsize=(13, 5), sharey=True)
+    fig, axes = plt.subplots(1, 2, figsize=(max(13, 3.1 * len(present(runs))), 5), sharey=True)
     for ax, key, title in ((axes[0], "pass_rate", "Pass rate (paper's task score)"),
                            (axes[1], "mean_score", "Mean artifact score")):
         for i, (c, l) in enumerate(vers):
@@ -286,8 +293,8 @@ def fig_task_scores(runs):
             ax.text(i + 0.36, m, f"{m:.2f}", va="center", fontsize=8.5, color=INK)
         if key == "pass_rate":
             ax.axhline(PAPER_T9_PASS_RATE, color="#e34948", linewidth=1.5, linestyle="--")
-            ax.text(-0.45, PAPER_T9_PASS_RATE + 0.015, f"Paper, GPT 5.4 Mini, task 9: {PAPER_T9_PASS_RATE:.2f}",
-                    ha="left", va="bottom", fontsize=8.5, color="#a83332")
+            ax.text(0.0, -0.32, f"Red dashed line: paper, GPT 5.4 Mini, task 9 = {PAPER_T9_PASS_RATE:.2f}",
+                    transform=ax.transAxes, ha="left", va="top", fontsize=8.5, color="#a83332")
         ax.set_xticks(range(len(vers)))
         ax.set_xticklabels([label_n(l, len(runs[c])) for c, l in vers], rotation=0, ha="center", fontsize=8)
         ax.set_ylim(0, 1.02)
@@ -295,14 +302,14 @@ def fig_task_scores(runs):
         ax.set_axisbelow(True)
         ax.set_title(title, loc="left", fontweight="bold")
     axes[0].set_ylabel("Task 9 score")
-    fig.suptitle("Task 9 score per run (light dots) with mean and 95% CI (dark; CI shown from 3 runs)", x=0.01, ha="left", fontsize=12)
+    fig.suptitle("Task 9 score per run (light dots) with mean and 95% CI (dark; 95% CI shown only for versions with 3+ runs)", x=0.01, ha="left", fontsize=12)
     save(fig, "fig_D_task_scores")
 
 
 # ---- Figure E: cost and wall time -----------------------------------------------------------
 def fig_cost_time(runs):
     vers = present(runs)
-    fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
+    fig, axes = plt.subplots(1, 2, figsize=(max(13, 3.1 * len(present(runs))), 4.8))
     for ax, key, unit, title in ((axes[0], "cost_usd", "$", "OpenAI cost per run (USD)"),
                                  (axes[1], "total_time_s", "h", "Wall time per run (hours)")):
         for i, (c, l) in enumerate(vers):
@@ -317,8 +324,8 @@ def fig_cost_time(runs):
             ax.text(i + 0.33, m, f"{m:.1f}", ha="left", va="center", fontsize=8.5, color=INK)
         if key == "cost_usd":
             ax.axhline(PAPER_COST_ALL_TASKS, color="#e34948", linewidth=1.5, linestyle="--")
-            ax.text(-0.45, PAPER_COST_ALL_TASKS + 0.2, f"Paper, GPT 5.4 Mini, mean over all 20 tasks: ${PAPER_COST_ALL_TASKS}",
-                    ha="left", va="bottom", fontsize=8.5, color="#a83332")
+            ax.text(0.0, -0.32, f"Red dashed line: paper, GPT 5.4 Mini, mean over all 20 tasks = ${PAPER_COST_ALL_TASKS}",
+                    transform=ax.transAxes, ha="left", va="top", fontsize=8.5, color="#a83332")
         ax.set_xticks(range(len(vers)))
         ax.set_xticklabels([label_n(l, len(runs[c])) for c, l in vers], rotation=0, ha="center", fontsize=8)
         ax.yaxis.grid(True, color=GRID, linewidth=0.8)
@@ -330,7 +337,7 @@ def fig_cost_time(runs):
 
 # ---- Figure F: score per dollar (efficiency) ------------------------------------------------
 def fig_efficiency(runs):
-    vers = present(runs)
+    vers = [(c, l) for c, l in present(runs) if len(runs[c]) >= 5]  # complete versions only
     fig, ax = plt.subplots(figsize=(7.5, 5))
     for c, l in vers:
         xs = [r.get("cost_usd") or 0 for r in runs[c]]
@@ -347,7 +354,7 @@ def fig_efficiency(runs):
     ax.set_ylim(0, 1.02)
     ax.grid(True, color=GRID, linewidth=0.8)
     ax.set_axisbelow(True)
-    ax.set_title("Cost vs task 9 score (light: runs, dark: version mean)", loc="left", fontsize=11)
+    ax.set_title("Cost vs task 9 score, complete versions (light: runs, dark: version mean)", loc="left", fontsize=11)
     save(fig, "fig_F_cost_vs_score")
 
 

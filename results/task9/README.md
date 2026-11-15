@@ -17,9 +17,12 @@ grader. The task score is the paper's: the share of the 14 artifacts with a grad
 | + Preinstalled env | [`exp/t9-env`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env) | 0.57 ± 0.45 | 0.69 | 0.93 / 0.07 | $2.08 | 1.8 h | 0.6 |
 | **+ Env + Artifact reviewer** | [`exp/t9-env-reviewer`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer) | **0.76 ± 0.29** | **0.83** | **0.93 / 0.50** | $2.24 | 1.8 h | 0.4 |
 | + Env + Sub-agents (v4) | [`exp/t9-env-subagents`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents) | 0.46 ± 0.05 | 0.66 | 0.50 / 0.43 | $10.14 | 5.7 h | 1.0 † |
+| *+ Env + Sub-agents v5 (preliminary, 1 of 5 runs)* | [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | *0.50* | *0.68* | *–* | *$3.65* | *2.7 h* | *2.0 †* |
+| *+ Env + Sub-agents v5 + past.dev (preliminary, 3 of 5 runs)* | [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | *0.48 ± 0.27* | *0.67* | *0.57 / 0.36* | *$3.08* | *2.9 h* | *1.5 † (2 runs re-judged)* |
 | *Paper: GPT-5.4 Mini, task 9* | – | *0.71 (one run)* | *not reported* | – | *$8.47 (mean over all 20 tasks)* | – | *3.25 (all tasks)* |
 
 † Judged on the full logs. See [the judge blind spot](#3-the-official-process-judge-cannot-see-sub-agents) below.
+Rows in *italics* are versions whose 5 runs are not all finished yet. They make no claim and are not tested.
 
 **Statistics.** Exact one-sided permutation tests against the baseline (5 vs 5 runs, all 252 relabellings):
 
@@ -48,7 +51,7 @@ never sees ground truth, grader output or reference answers, and it judges forma
 Preinstalling HISAT2 2.2.1, Subread, DESeq2 1.30.1, clusterProfiler and the matching annotation packages, all first on PATH,
 has three effects:
 
-- **Cost and time:** about a third cheaper and faster.
+- **Cost and time:** 28% cheaper ($2.08 against $2.91) and 34% faster (1.8 h against 2.8 h).
 - **Failure tags:** 2.4 per run down to 0.6. Environment-setup failures disappear.
 - **Score:** spread out in both directions (0.07 to 0.93). The mean gain (+0.19) is not significant with 5 runs.
 
@@ -77,8 +80,11 @@ in a $8.88 run:
   on the planner.
 
 These findings shaped **v5** (blocking waits, no rebuilding valid artifacts, parallel dependency levels, sub-agents at
-`medium` effort, no planner) and a **past.dev run memory**, so that sub-agents share what earlier agents found. Both are
-running now (see below).
+`medium` effort, no planner) and a **past.dev run memory**, so that sub-agents share what earlier agents found.
+
+**First v5 results (preliminary, 4 of 10 runs finished):** cost drops from $10.14 to **$3.65 (v5, 1 run)** and **$3.08
+(v5 + past.dev, mean of 3 runs)**, and time from 5.7 h to about 2.8 h. The score stays at the v4 level (task score 0.50 and
+0.48). The cost fixes work, but sub-agents still do not beat the single-agent reviewer.
 
 ### 5. One ambiguous sentence in the prompt drives most of the error left in the T98G artifacts
 The count matrix is correct (score 1.00) in **every** run. The T98G differential-expression and GO artifacts then split by
@@ -105,7 +111,7 @@ most strongly the T98G DE tables and the GO enrichments. The count matrix is sol
 
 ![Heatmap of artifact scores](figures/fig_C_heatmap_scores.png)
 
-**Task score per run, with mean and 95% CI.** Left: pass rate, the paper's score. Right: mean artifact score.
+**Task score per run, with mean and 95% CI.** Left: pass rate, the paper's score. Right: mean artifact score. Versions marked *preliminary* have fewer than 5 runs.
 
 ![Task scores](figures/fig_D_task_scores.png)
 
@@ -114,7 +120,7 @@ leaves only occasional "inefficient analysis" tags. † marks the full-trace re-
 
 ![Failure modes](figures/fig_A_B_failure_modes.png)
 
-**Cost against score.** The reviewer version sits in the top-left corner: higher score, low cost.
+**Cost against score** (complete versions only). The reviewer version sits in the top-left corner: higher score, low cost.
 
 ![Cost vs score](figures/fig_F_cost_vs_score.png)
 
@@ -125,15 +131,15 @@ leaves only occasional "inefficient analysis" tags. † marks the full-trace re-
 Also: [pass frequency per artifact](figures/fig_C_heatmap_pass_frequency.png) and [summary table](figures/summary.md).
 PDFs sit next to each PNG.
 
-## Versions still running (5 runs each, results will be added)
+## Versions still running (results are added as runs finish)
 
 | Version | Branch | Idea |
 |---|---|---|
 | + Env + Reviewer + past.dev | [`exp/t9-env-reviewer-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-pastdev) | The reviewer also sees the tables it already accepted in this run, for cross-table format consistency |
 | + Env + Dual reviewer + past.dev | [`exp/t9-env-reviewer-dual-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-dual-pastdev) | Local reviewer plus a consistency reviewer with a rolling run memory; both must accept |
-| + Env + Sub-agents v5 | [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | The cost fixes from finding 4 |
+| + Env + Sub-agents v5 (1/5 done) | [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | The cost fixes from finding 4 |
 | + Env + Sub-agents + past.dev | [`exp/t9-env-subagents-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-pastdev) | v4 plus a shared past.dev memory of inspections, files and conventions |
-| + Env + Sub-agents v5 + past.dev | [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | Both of the above |
+| + Env + Sub-agents v5 + past.dev (3/5 done) | [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | Both of the above |
 
 ## Method notes and caveats
 

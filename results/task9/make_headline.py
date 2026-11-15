@@ -19,7 +19,7 @@ BLUE, BLUE_LIGHT, RED = "#1f5fae", "#8db7ea", "#c8322f"
 
 def main():
     runs = mf.load()
-    vers = [(c, l) for c, l in mf.VERSIONS if runs.get(c)]
+    vers = [(c, l) for c, l in mf.VERSIONS if len(runs.get(c, [])) >= 5]  # headline: complete versions only
     short = {
         "t9-baseline": "Baseline",
         "t9-env": "+ Preinstalled\nenv",
