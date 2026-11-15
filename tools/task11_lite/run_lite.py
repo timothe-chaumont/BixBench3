@@ -174,6 +174,9 @@ def main():
 if sudo systemctl is-active --quiet bixbench3-run.service; then echo 'Refusing to overwrite an active run'; exit 1; fi
 sudo systemctl stop bixdash-collect.timer bixdash-collect.service || true
 sudo systemctl reset-failed bixbench3-run.service || true
+# An interrupted Inspect launch can leave a gateway holding localhost:18080.
+# The service is inactive; remove only this task's disposable old containers.
+sudo docker ps -a --format '{{.ID}} {{.Names}}' | awk '$2 ~ /^inspect-task11_lite-/ {print $1}' | xargs -r sudo docker rm -f
 sudo python3 - <<'ARCHIVE'
 from pathlib import Path
 from datetime import datetime,UTC
