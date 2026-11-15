@@ -104,7 +104,7 @@ pre { background: var(--surface-2); padding: 8px 10px; border-radius: 6px; white
 <script>
 const REFRESH_MS = 60_000;
 const DEADLINE = new Date("2026-11-15T22:00:00Z"); // dim. 14:00 PT — rendu hackathon
-let RUNS = [], HIST = {}, FILTER = "all";
+let RUNS = [], HIST = {}, FILTER = "all", OWNER = "all";
 const openIds = new Set();
 
 const fmtDur = s => {
@@ -169,15 +169,21 @@ async function load() {
 
 function renderFilters() {
   const conds = ["all", ...new Set(RUNS.map(r => r.meta?.condition || "?"))];
-  document.getElementById("filters").innerHTML = conds.map(c =>
-    `<button aria-pressed="${FILTER === c}" data-f="${esc(c)}">${c === "all" ? "Tous" : esc(c)}</button>`).join("");
-  document.querySelectorAll("#filters button").forEach(b => b.onclick = () => { FILTER = b.dataset.f; render(); });
+  const owners = ["all", ...new Set(RUNS.map(r => r.meta?.owner || "?"))];
+  const btns = (vals, cur, attr, allLabel) => vals.map(c =>
+    `<button aria-pressed="${cur === c}" data-${attr}="${esc(c)}">${c === "all" ? allLabel : esc(c)}</button>`).join("");
+  document.getElementById("filters").innerHTML =
+    `<span class="sub" style="align-self:center">Condition</span>${btns(conds, FILTER, "f", "Toutes")}` +
+    (owners.length > 2 ? `<span class="sub" style="align-self:center;margin-left:12px">Qui</span>${btns(owners, OWNER, "o", "Tout le monde")}` : "");
+  document.querySelectorAll("#filters button[data-f]").forEach(b => b.onclick = () => { FILTER = b.dataset.f; render(); });
+  document.querySelectorAll("#filters button[data-o]").forEach(b => b.onclick = () => { OWNER = b.dataset.o; render(); });
 }
 
 function render() {
   renderFilters();
   const box = document.getElementById("runs");
-  const list = RUNS.filter(r => FILTER === "all" || (r.meta?.condition || "?") === FILTER);
+  const list = RUNS.filter(r => (FILTER === "all" || (r.meta?.condition || "?") === FILTER)
+    && (OWNER === "all" || (r.meta?.owner || "?") === OWNER));
   if (!list.length) { box.innerHTML = `<p class="muted">Aucun run. Le collecteur publie dans <code>_dashboard/&lt;run_id&gt;/</code>.</p>`; return; }
   box.innerHTML = list.map(runCard).join("");
   box.querySelectorAll("details.run").forEach(d => {
@@ -198,7 +204,7 @@ function runCard(r) {
     <span class="status" style="color:var(--${scolor})">${statusIcon(sicon, scolor)}<span style="color:var(--text-primary)">${esc(slabel)}</span></span>
     <span class="title">
       <div class="desc">${esc(m.description || "(pas de RUN_DESCRIPTION)")}</div>
-      <div class="ids"><span class="chip">${esc(m.condition || "?")}</span><span class="chip">${esc(m.model || "?")}${m.effort ? " · " + esc(m.effort) : ""}</span>tâche ${esc(m.task_id ?? "?")} · ${esc(r.run_id)}</div>
+      <div class="ids"><span class="chip">${esc(m.condition || "?")}</span>${m.owner ? `<span class="chip">${esc(m.owner)}</span>` : ""}<span class="chip">${esc(m.model || "?")}${m.effort ? " · " + esc(m.effort) : ""}</span>tâche ${esc(m.task_id ?? "?")} · ${esc(r.run_id)}</div>
     </span>
     <span class="kpi"><div class="v">${fmtScore(score)}${l.score_is_final ? "" : score != null ? "*" : ""}</div><div class="l">score</div></span>
     <span class="kpi hide-sm"><div class="v">${l.artifacts_present ?? "—"}/${l.artifacts_total ?? "—"}</div><div class="l">artefacts</div></span>
@@ -219,7 +225,7 @@ function runBody(r) {
   const done = l.status === "succeeded" || l.status === "failed";
   const afterDeadline = !done && limitEnd && limitEnd > DEADLINE;
   const cells = [
-    ["Début", fmtTime(m.started_at), m.vm || ""],
+    ["Début", fmtTime(m.started_at), [m.vm, m.gcp_project].filter(Boolean).join(" · ")],
     ["Temps écoulé", fmtDur(l.elapsed_s), `phase : ${l.phase || "—"}`],
     done ? ["Fin", fmtTime(l.ts), l.status === "succeeded" ? "run terminé" : "run en échec"]
          : ["Restant estimé", fmtDur(eta.remaining_s), eta.method ? `≈ ${fmtTime(etaEnd?.toISOString())} · ${eta.method}` : "pas encore estimable"],

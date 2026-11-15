@@ -105,6 +105,29 @@ def parse_run_sh() -> dict:
     return out
 
 
+def gcp_project_id() -> str | None:
+    """Project of this VM, from the GCE metadata server (no credentials needed)."""
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            "http://metadata.google.internal/computeMetadata/v1/project/project-id",
+            headers={"Metadata-Flavor": "Google"},
+        )
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            return resp.read().decode().strip() or None
+    except Exception:
+        return None
+
+
+def dashboard_uri(cfg: dict, meta: dict) -> str | None:
+    """Where snapshots go. Priority: env BIXDASH_DASHBOARD_URI, run_meta.json
+    "dashboard_uri" (central bucket shared by the team), else <results bucket>/_dashboard."""
+    uri = os.environ.get("BIXDASH_DASHBOARD_URI") or meta.get("dashboard_uri")
+    if not uri and cfg.get("results_bucket"):
+        uri = f"{cfg['results_bucket']}/_dashboard"
+    return uri.rstrip("/") if uri else None
+
+
 def load_meta(cfg: dict) -> dict:
     """meta = run.sh facts, overridden by /var/lib/bixdash/run_meta.json."""
     override = read_json(STATE / "run_meta.json")
@@ -118,6 +141,8 @@ def load_meta(cfg: dict) -> dict:
         "description": cfg.get("description", ""),
         "baseline_run_id": None,
         "vm": os.uname().nodename,
+        "owner": None,
+        "gcp_project": gcp_project_id(),
         "results_prefix": cfg.get("results_prefix"),
         "time_limit_s": TIME_LIMIT_S,
         "deadline": os.environ.get("BIXDASH_DEADLINE", "2026-11-15T22:00:00+00:00"),
@@ -478,9 +503,18 @@ def estimate_eta(elapsed: float, present: int, total: int, progress: dict, histo
 
 
 # -------------------------------------------------------------------- upload
-def gs_put(local: Path, dest: str) -> None:
-    subprocess.run(["gcloud", "storage", "cp", "--quiet", str(local), dest],
-                   capture_output=True, timeout=120, check=True)
+def gs_put_many(paths: list[Path], dest_prefix: str) -> dict:
+    """Upload files in ONE gcloud call; return a status record (kept locally and printed)."""
+    try:
+        proc = subprocess.run(
+            ["gcloud", "storage", "cp", "--quiet", *[str(p) for p in paths], dest_prefix],
+            capture_output=True, text=True, timeout=180,
+        )
+        ok = proc.returncode == 0
+        err = None if ok else redact(proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else "upload failed")
+    except (OSError, subprocess.SubprocessError) as error:
+        ok, err = False, str(error)[:300]
+    return {"ts": now_iso(), "dest": dest_prefix, "ok": ok, "error": err}
 
 
 def main() -> int:
@@ -585,12 +619,18 @@ def main() -> int:
     (STATE / "meta.json").write_text(json.dumps(meta, indent=2))
     (STATE / "latest.json").write_text(json.dumps(snap, indent=2))
 
-    if not args.no_upload and cfg.get("results_bucket"):
-        dest = f"{cfg['results_bucket']}/_dashboard/{meta['run_id']}/"
-        for name in ("meta.json", "latest.json", "history.jsonl"):
-            gs_put(STATE / name, dest + name)
-    print(json.dumps({k: snap[k] for k in ("ts", "elapsed_s", "phase", "artifacts_present", "partial_score", "cost_usd", "idle_s")}))
-    return 0
+    upload = None
+    target = dashboard_uri(cfg, meta)
+    if not args.no_upload and target:
+        upload = gs_put_many([STATE / n for n in ("meta.json", "latest.json", "history.jsonl")],
+                             f"{target}/{meta['run_id']}/")
+        (STATE / "upload_status.json").write_text(json.dumps(upload, indent=2))
+    summary = {k: snap[k] for k in ("ts", "elapsed_s", "phase", "artifacts_present", "partial_score", "cost_usd", "idle_s")}
+    if upload:
+        summary["upload"] = "ok" if upload["ok"] else f"FAILED: {upload['error']}"
+        summary["dashboard"] = upload["dest"]
+    print(json.dumps(summary))
+    return 0 if (upload is None or upload["ok"]) else 3
 
 
 if __name__ == "__main__":

@@ -20,6 +20,11 @@ def build_command(args):
             command.append('--' + key.replace('_', '-'))
     if args.boot_disk_source:
         command.extend(["--boot-disk-source", args.boot_disk_source])
+    if args.owner:
+        command.extend(['--owner', args.owner])
+    dashboard_uri = args.dashboard_uri or config.get('dashboard_uri')
+    if dashboard_uri:
+        command.extend(['--dashboard-uri', dashboard_uri])
     if args.dry_run:
         command.append('--dry-run')
     return command
@@ -32,6 +37,9 @@ def main():
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--boot-disk-type', choices=['pd-standard', 'pd-balanced', 'pd-ssd'])
     parser.add_argument("--boot-disk-source", help="reuse an already restored compatible boot disk")
+    parser.add_argument('--owner', help='team member running the experiment (dashboard filter)')
+    parser.add_argument('--dashboard-uri', help='central dashboard prefix, e.g. gs://bixbench3-task11-jex20-results/_dashboard '
+                        '(needed when launching from your own GCP project)')
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
     config = json.loads(args.config.read_text())

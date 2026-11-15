@@ -531,6 +531,8 @@ class GCPRunner:
             "--description", self.settings.run_description,
             "--condition", self.settings.run_condition,
             "--interval", "5min", "--grade-every", str(self.settings.tracking_grade_every),
+            *(("--dashboard-uri", self.settings.dashboard_uri) if self.settings.dashboard_uri else ()),
+            *(("--owner", self.settings.run_owner) if self.settings.run_owner else ()),
         )))
 
     def complete_run(self, run_id: str) -> dict[str, Any]:
@@ -1181,6 +1183,8 @@ class GCPRunner:
                 "description": self.settings.run_description,
                 "condition": self.settings.run_condition,
                 "grade_every_seconds": self.settings.tracking_grade_every,
+                "dashboard_uri": self.settings.dashboard_uri or None,
+                "owner": self.settings.run_owner or None,
             },
             "process_judge": process_judge_config(),
             "started_at": datetime.now(UTC).isoformat(),

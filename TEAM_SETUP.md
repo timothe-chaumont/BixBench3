@@ -29,6 +29,13 @@ Cloud Run URL: https://bixdash-385251430960.us-central1.run.app
 
 The team explicitly chose **public access**: open the URL directly, without a token. This publishes dashboard metadata, metrics and activity excerpts; the underlying results bucket remains private. Cloud Run has `BIXDASH_PUBLIC=1` and no shared-token environment secret. The old `bixdash-web` VM is stopped.
 
+**Launching from your own GCP project.** Add `--owner <name> --dashboard-uri gs://bixbench3-task11-jex20-results/_dashboard`
+to `scripts/run_team.py`; snapshots then go to the shared bucket read by Cloud Run while your results bucket stays private.
+Beforehand, an admin of the shared project runs `tools/bixdash/tools/grant_dashboard_access.sh <your-project-id>`, which grants
+your project's default compute service account write access limited to the `_dashboard/` prefix. The installer prints
+`OK: snapshots published to …` or an explicit warning if the write is refused. Details:
+[multi-project tracking](tools/bixdash/README.md#plusieurs-projets-gcp-un-projet-par-membre-dashboard-central).
+
 The integrated `--track-live` launcher copies George's collector to each analyst VM before the run starts. The observer reads the Inspect SQLite buffer in read-only mode, writes dashboard snapshots to `gs://<results-bucket>/_dashboard/`, and has low CPU/I/O priority. It adds some overhead, so record tracking cadence in comparisons. The web service reads those snapshots using a dedicated read-only service account.
 
 Cloud Run deployment settings: 1 CPU, 512 MiB, min instances 0, max instances 1, request-based CPU allocation, explicit public mode (`BIXDASH_PUBLIC=1`). There is no always-on dashboard VM. Storage, build, registry and secret operations may still incur costs.

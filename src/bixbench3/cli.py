@@ -78,6 +78,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--run-description", default="", help="one-line experiment description for live tracking")
     run.add_argument("--condition", default="baseline", help="dashboard experiment condition")
     run.add_argument("--tracking-grade-every", type=int, default=0, help="partial grading interval in seconds; 0 disables it")
+    run.add_argument("--dashboard-uri", default="", help="central bixdash bucket prefix (gs://BUCKET/_dashboard); default: <results bucket>/_dashboard")
+    run.add_argument("--owner", default="", help="team member running the experiment (shown on the dashboard)")
     run.add_argument("--task11-runtime", action="store_true", help="use the task-11-only runtime without licensed 10x tools")
     run.add_argument(
         "--model-arg",
@@ -161,7 +163,7 @@ def _run(arguments: argparse.Namespace) -> int:
         arguments.effort,
         user_model_args=model_args,
     )
-    runner = _runner(arguments.project, machine_type=arguments.machine_type, task11_runtime=arguments.task11_runtime, boot_disk_gb=arguments.boot_disk_gb, cost_limit=arguments.cost_limit, track_live=arguments.track_live, run_description=arguments.run_description, run_condition=arguments.condition, tracking_grade_every=arguments.tracking_grade_every, boot_disk_type=arguments.boot_disk_type, runtime_image=arguments.runtime_image, no10x_runtime=arguments.no10x_runtime, runtime_boot_device=arguments.runtime_boot_device, boot_disk_source=arguments.boot_disk_source)
+    runner = _runner(arguments.project, machine_type=arguments.machine_type, task11_runtime=arguments.task11_runtime, boot_disk_gb=arguments.boot_disk_gb, cost_limit=arguments.cost_limit, track_live=arguments.track_live, run_description=arguments.run_description, run_condition=arguments.condition, tracking_grade_every=arguments.tracking_grade_every, boot_disk_type=arguments.boot_disk_type, runtime_image=arguments.runtime_image, no10x_runtime=arguments.no10x_runtime, runtime_boot_device=arguments.runtime_boot_device, boot_disk_source=arguments.boot_disk_source, dashboard_uri=arguments.dashboard_uri, owner=arguments.owner)
     if arguments.track_live and not arguments.results_bucket:
         raise ValueError("--track-live requires --results-bucket")
     result = runner.run_task(
@@ -279,7 +281,7 @@ def _print_judge_summary(result: dict[str, Any], output_root: Path) -> None:
     print(f"Process judge file: {output_root / 'judge.json'}")
 
 
-def _runner(project: str, *, machine_type: str = RUN_MACHINE_TYPE, task11_runtime: bool = False, boot_disk_gb: int = 500, cost_limit: float | None = None, track_live: bool = False, run_description: str = "", run_condition: str = "baseline", tracking_grade_every: int = 0, boot_disk_type: str = "pd-balanced", runtime_image: str | None = None, no10x_runtime: bool = False, runtime_boot_device: str = "persistent-disk-0", boot_disk_source: str | None = None) -> GCPRunner:
+def _runner(project: str, *, machine_type: str = RUN_MACHINE_TYPE, task11_runtime: bool = False, boot_disk_gb: int = 500, cost_limit: float | None = None, track_live: bool = False, run_description: str = "", run_condition: str = "baseline", tracking_grade_every: int = 0, boot_disk_type: str = "pd-balanced", runtime_image: str | None = None, no10x_runtime: bool = False, runtime_boot_device: str = "persistent-disk-0", boot_disk_source: str | None = None, dashboard_uri: str = "", owner: str = "") -> GCPRunner:
     if boot_disk_type not in {"pd-balanced", "pd-standard", "pd-ssd"}:
         raise ValueError("unsupported boot disk type")
     if no10x_runtime and not runtime_image:
@@ -294,6 +296,10 @@ def _runner(project: str, *, machine_type: str = RUN_MACHINE_TYPE, task11_runtim
         raise ValueError("experiment description and condition must be single-line")
     if tracking_grade_every < 0:
         raise ValueError("tracking grading interval must be nonnegative")
+    if dashboard_uri and not dashboard_uri.startswith("gs://"):
+        raise ValueError("--dashboard-uri must be a gs:// prefix")
+    if any(c in dashboard_uri + owner for c in "\r\n "):
+        raise ValueError("dashboard URI and owner must be single tokens")
     repo_root = Path(__file__).resolve().parents[2]
     settings = RuntimeSettings(
         machine_type=machine_type, include_10x=not (task11_runtime or no10x_runtime), boot_disk_gb=boot_disk_gb,
@@ -301,6 +307,7 @@ def _runner(project: str, *, machine_type: str = RUN_MACHINE_TYPE, task11_runtim
         analyst_cost_limit=cost_limit, track_live=track_live,
         run_description=run_description, run_condition=run_condition,
         tracking_grade_every=tracking_grade_every,
+        dashboard_uri=dashboard_uri.rstrip("/"), run_owner=owner,
     )
     if task11_runtime:
         settings = replace(settings, runtime_image_name="bixbench3-runtime-v1-0-0-r7-task11-no10x")

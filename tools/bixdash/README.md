@@ -99,6 +99,54 @@ Inspect (`agent()`/`run()`, `as_tool`, `handoff`) qui ouvrent un span de type `a
 nommé d'après l'agent. Des agents lancés hors Inspect (autre SDK, sous-processus) ne sont
 pas visibles dans la trace.
 
+## Plusieurs projets GCP (un projet par membre, dashboard central)
+
+Chaque membre lance ses expériences dans **son propre projet GCP** (quota et crédits
+séparés), avec son propre bucket de résultats privé. Seuls les **snapshots du
+dashboard** sont centralisés dans `gs://bixbench3-task11-jex20-results/_dashboard/`,
+que lit le dashboard Cloud Run (voir TEAM_SETUP.md).
+
+**1. Une fois par membre : l'admin du projet du dashboard autorise son projet**
+```bash
+bash tools/bixdash/tools/grant_dashboard_access.sh <PROJET_DU_MEMBRE> [email-du-membre]
+```
+Accorde `roles/storage.objectUser` sur le bucket central, **limité par condition IAM au
+préfixe `_dashboard/`**, au compte de service par défaut des VMs du membre
+(`<numéro>-compute@developer.gserviceaccount.com`, celui que le runner attache aux VMs
+de run) et, optionnellement, à son e-mail (pour l'import final depuis son laptop).
+Rien d'autre n'est partagé : ni bucket de résultats, ni vérité terrain, ni VM.
+
+**2. Chaque membre lance avec le profil d'équipe, en pointant vers le bucket central**
+```bash
+uv run --locked python scripts/run_team.py \
+  --task 11 --project <SON_PROJET> --results-bucket gs://<SON_BUCKET_PRIVE> \
+  --condition v2a --description "v2a : <hypothèse>" \
+  --owner <prénom> --dashboard-uri gs://bixbench3-task11-jex20-results/_dashboard
+```
+(Équivalent bas niveau : `bixbench3 run … --track-live --owner <prénom> --dashboard-uri gs://…/_dashboard`.)
+(Installation manuelle : `install_collector.sh … --owner <prénom> --dashboard-uri gs://…/_dashboard`.)
+L'installeur affiche `OK: snapshots published to …` ou un **WARNING** explicite si
+l'écriture est refusée (étape 1 pas faite). Le dernier statut d'upload est aussi dans
+`/var/lib/bixdash/upload_status.json` et dans `journalctl -u bixdash-collect`.
+
+Note : chaque projet doit disposer de sa propre image runtime compatible
+(`bixbench3-runtime-v1-0-0-r7-task11-no10x`, voir TEAM_SETUP.md / ADAPTED_RUNNER.md).
+
+**3. À la fin : tout centraliser**
+- Le dashboard a déjà le run (snapshot final après notation).
+- Archiver le run dans le repo, comme la baseline : `iterations/<version>/`
+  (`inspect.eval`, `grade.json`, `judge.json`, `run_manifest.json`, README court).
+- N'importe qui peut alors (ré)importer un run depuis le repo, sans accès au projet du membre :
+  ```bash
+  python3 tools/bixdash/tools/import_finished_run.py iterations/<version> \
+    --run-id <run_id> --description "…" --condition <version> --owner <prénom> \
+    --dashboard-prefix gs://bixbench3-task11-jex20-results/_dashboard
+  ```
+
+Comparabilité : même profil que la baseline (n2-standard-8, 200 Go, sans Cell Ranger,
+même modèle/effort, 24 h / 5 000 messages) sauf ce que la version teste ; noter tout
+écart (projet, région, image) dans la section du tracker.
+
 ## 3. Lancer le site
 
 ```bash

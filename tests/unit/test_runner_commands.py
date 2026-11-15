@@ -707,6 +707,34 @@ def test_live_tracking_installs_separate_collector_without_partial_grading(
     assert "bixdash-collect.service" not in remote_run_script(plan, replace(runner.settings, track_live=False))
 
 
+def test_live_tracking_forwards_central_dashboard_and_owner(task: TaskSpec, tmp_path: Path) -> None:
+    executor = RecordingExecutor()
+    source = tmp_path / "tools" / "bixdash" / "vm"
+    source.mkdir(parents=True)
+    for name in ("collect.py", "install_collector.sh"):
+        (source / name).write_text("# collector fixture\n")
+    runner = GCPRunner(
+        project="member-project", executor=executor, repo_root=tmp_path,
+        settings=RuntimeSettings(
+            track_live=True, run_description="v2a: validation gates", run_condition="v2a",
+            dashboard_uri="gs://team-dashboard/_dashboard", run_owner="georges",
+        ),
+    )
+    model = resolve_model("openai/gpt-5.4-mini", "max")
+    plan = runner.build_run_plan(task=task, model=model, results_bucket="gs://member-results")
+    runner._install_live_tracking(plan)
+    command = executor.calls[1][-1]
+    assert "--dashboard-uri gs://team-dashboard/_dashboard" in command
+    assert "--owner georges" in command
+
+
+def test_tracking_rejects_non_gcs_dashboard_uri() -> None:
+    from bixbench3.cli import _runner
+
+    with pytest.raises(ValueError, match="gs://"):
+        _runner("project", dashboard_uri="https://example.org/x")
+
+
 def test_tracking_requires_description_and_nonnegative_interval() -> None:
     from bixbench3.cli import _runner
 
@@ -759,3 +787,30 @@ def test_restored_standard_boot_avoids_inheriting_machine_image_disks(task: Task
     command = plan.commands['create_run_vm']
     assert not any(a.startswith(('--source-machine-image=', '--create-disk=')) for a in command)
     assert '--disk=name=restored-standard-boot,boot=yes,auto-delete=yes,device-name=persistent-disk-0' in command
+
+
+def test_team_launcher_forwards_owner_and_central_dashboard(tmp_path: Path) -> None:
+    import importlib.util
+    import json as _json
+    from types import SimpleNamespace
+
+    spec = importlib.util.spec_from_file_location(
+        "run_team", Path(__file__).resolve().parents[2] / "scripts" / "run_team.py")
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    config = tmp_path / "team.json"
+    config.write_text(_json.dumps({
+        "machine_type": "n2-custom-6-32768", "boot_disk_gb": 200, "boot_disk_type": "pd-standard",
+        "model": "openai/gpt-5.4-mini", "effort": "max", "runtime_image": "img",
+        "no10x_runtime": True, "track_live": True, "tracking_grade_every": 0,
+    }))
+    args = SimpleNamespace(config=config, task="11", project="member", results_bucket="gs://member-results",
+                           condition="v2a", description="v2a test", boot_disk_type=None, boot_disk_source=None, dry_run=True,
+                           owner="georges", dashboard_uri="gs://team/_dashboard")
+    command = module.build_command(args)
+    assert command[command.index("--owner") + 1] == "georges"
+    assert command[command.index("--dashboard-uri") + 1] == "gs://team/_dashboard"
+    args.owner, args.dashboard_uri = None, None
+    assert "--owner" not in module.build_command(args)
+

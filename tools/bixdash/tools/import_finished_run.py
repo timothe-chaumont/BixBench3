@@ -124,6 +124,8 @@ def main():
     ap.add_argument("--description", required=True)
     ap.add_argument("--condition", default="baseline")
     ap.add_argument("--task-id", default="11")
+    ap.add_argument("--owner", default=None, help="team member who ran it")
+    ap.add_argument("--gcp-project", default=None, help="GCP project the run used")
     ap.add_argument("--dashboard-prefix", default=None, help="default: gs://<bucket>/_dashboard")
     ap.add_argument("--out-dir", default=None, help="write locally instead of to GCS")
     ap.add_argument("--run-id", default=None, help="override run_id (default: <paper_id>__<model>__<timestamp>)")
@@ -222,6 +224,8 @@ def main():
         "results_prefix": args.results_uri.rstrip("/") + "/", "time_limit_s": 86400,
         "started_at": datetime.fromtimestamp(t0).astimezone().isoformat(timespec="seconds"),
         "imported": True,
+        "owner": args.owner,
+        "gcp_project": args.gcp_project or manifest.get("project"),
     }
     latest = {
         "ts": history[-1]["ts"], "elapsed_s": round(elapsed_total), "phase": "completed",
