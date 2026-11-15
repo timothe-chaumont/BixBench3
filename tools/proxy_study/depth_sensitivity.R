@@ -27,7 +27,7 @@ compare<-function(z,label,fraction,seed){
   x<-base[[k]];y<-z[[k]];ok<-is.finite(x$log2FoldChange)&is.finite(y$log2FoldChange)
   sx<-rownames(x)[!is.na(x$padj)&x$padj<.1];sy<-rownames(y)[!is.na(y$padj)&y$padj<.1]
   intersect_n<-length(intersect(sx,sy));union_n<-length(union(sx,sy));denom<-length(sx)+length(sy)
-  n<<-n+1;rows[[n]]<<-data.frame(source=label,fraction=fraction,seed=seed,contrast=k,n_reference_significant=length(sx),n_significant=length(sy),significant_jaccard=if(union_n)intersect_n/union_n else NA,significant_f1=if(denom)2*intersect_n/denom else NA,logfc_spearman=cor(x$log2FoldChange[ok],y$log2FoldChange[ok],method='spearman'),direction_agreement=mean(sign(x$log2FoldChange[ok])==sign(y$log2FoldChange[ok])))
+  n<<-n+1;rows[[n]]<<-data.frame(source=label,fraction=fraction,seed=seed,contrast=k,n_reference_significant=length(sx),n_significant=length(sy),n_logfc_finite_both=sum(ok),fraction_finite_both=sum(ok)/sum(is.finite(x$log2FoldChange)),significant_recall=if(length(sx))intersect_n/length(sx) else NA,significant_precision=if(length(sy))intersect_n/length(sy) else NA,significant_jaccard=if(union_n)intersect_n/union_n else NA,significant_f1=if(denom)2*intersect_n/denom else NA,logfc_spearman=cor(x$log2FoldChange[ok],y$log2FoldChange[ok],method='spearman'),direction_agreement=mean(sign(x$log2FoldChange[ok])==sign(y$log2FoldChange[ok])))
  }
  write.csv(do.call(rbind,rows),file.path(output,'depth_metrics.csv'),row.names=FALSE)
 }
