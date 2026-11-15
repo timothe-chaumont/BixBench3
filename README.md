@@ -1,104 +1,114 @@
-# Harness engineering for AI scientists on BixBench3
+# Can a cheap AI scientist do better with a better lab around it?
 
-> **AI Research Hackathon, Track 3: AI Scientist Swarms.** We keep the model fixed (GPT-5.4 Mini) and change only the
-> harness around it: tools, environment, reviewers and sub-agents. We measure which changes make it better at
-> reproducing a published biology study from raw data, and what each one costs. Every number below comes from real
-> graded runs. Every version runs 5 times.
+*AI Research Hackathon, Track 3: AI Scientist Swarms*
 
-## In one minute
-
-| | |
-|---|---|
-| **Benchmark** | [BixBench3](https://arxiv.org/abs/2608.25286): an agent gets raw sequencing data and the methods of a paper. It must reproduce the paper's result tables (artifacts), which are graded against the published ones. The best model in the paper averages 0.48. |
-| **Our task** | Task 9: REST loss in T98G and HEK293 cells (Tag-Seq). From raw FASTQs to 14 artifacts: alignment and count matrix, 9 differential-expression tables, shared-gene sets, GO enrichments. |
-| **Best result** | Adding an **artifact format reviewer** raises the task score from **0.39 to 0.76** (5 runs each, p = 0.024). That is above the paper's GPT-5.4 Mini result on the same task (0.71), and runs are **cheaper** ($2.24 against $2.91). |
-| **Surprise** | **Sub-agent "swarms" cost 3.5× more for no gain**, and the benchmark's process judge **cannot see what sub-agents do**. |
+**Short answer: yes.** One well-placed reviewer nearly doubled our agent's score. A swarm of sub-agents cost 3.5× more
+and did not help.
 
 ![Task 9 headline results](results/task9/figures/headline.png)
+<sub>Each light dot is one run, and each dark dot is the mean of 5 runs with a 95% confidence interval. Red line: the
+BixBench3 paper's result for the same model on the same task. Score = share of the 14 required result tables that match
+the paper's (grader score ≥ 0.80).</sub>
 
-**How to read this figure.** Each light dot is one run, and each dark dot with error bars is the mean of 5 runs with its
-95% confidence interval. The red dashed line is the paper's single GPT-5.4 Mini run on this task. The *task score* is the
-paper's metric: the share of the 14 artifacts whose grader score is at least 0.80. Right panel: OpenAI API cost per run.
+## The problem
 
-## Main findings (task 9, 5 runs per version)
+[BixBench3](https://arxiv.org/abs/2608.25286) tests whether AI agents can do real computational biology. The agent gets
+the raw sequencing data and the methods of a published paper, and must reproduce the paper's result tables. It has to
+align reads, count genes, run differential expression and GO enrichment. Even the best model in the paper scores only
+0.48 on average.
 
-| Version (what we add) | Task score, mean ± 95% CI | Worst / best run | Cost / run | Time / run |
-|---|---|---|---|---|
-| Baseline (official prompt, stock sandbox) | 0.39 ± 0.22 | 0.07 / 0.50 | $2.91 | 2.8 h |
-| + Preinstalled task environment | 0.57 ± 0.45 | 0.07 / 0.93 | $2.08 | 1.8 h |
-| **+ Env + Artifact format reviewer** | **0.76 ± 0.29** | **0.50 / 0.93** | **$2.24** | **1.8 h** |
-| + Env + Sub-agents (orchestrator, one sub-agent per artifact) | 0.46 ± 0.05 | 0.43 / 0.50 | $10.14 | 5.7 h |
-| *Paper: GPT-5.4 Mini, task 9 (one run)* | *0.71* | | *$8.47 (mean over all 20 tasks)* | |
+Most work improves the **model**. We asked the opposite question: **keep a small, cheap model (GPT-5.4 Mini) fixed, and
+change only the "lab" around it, meaning its tools, its environment and its colleagues. What actually helps, and at
+what cost?**
 
-1. **A format reviewer nearly doubles the score.** Before a table is published, a second call to the same model checks
-   it against the artifact's specification, using a computed summary of the file. The reviewer never sees ground truth.
-   No reviewer run falls below 0.50, and 3 of 5 pass 13 of the 14 artifacts. This is the only change that is
-   statistically significant with 5 runs (exact permutation test against the baseline: p = 0.024 on task score,
-   p = 0.012 on mean artifact score).
-2. **A preinstalled environment makes runs about 30% cheaper and 35% faster, and cuts failures.** Process-judge failure tags
-   drop from 2.4 to 0.6 per run, and setup failures disappear. The score, however, varies even more (0.07 to 0.93), and
-   the gain is not significant (p = 0.20). Once the tools are there, what remains is scientific choices.
-3. **Sub-agents cost 3.5× more for no gain.** A trace audit of one $8.88 run found that $3.18 (36%) went on 268 polling
-   calls while a genome index was being built. Each sub-agent also re-read context that earlier agents had already
-   gathered. A redesigned **v5** (blocking waits, parallel levels, sub-agents at medium effort) cuts the cost to about
-   **$3–4 per run** in its first finished runs, with a similar score. That is preliminary: 4 of its 10 runs are done.
-4. **The official process judge cannot see sub-agents.** It reads only the top-level transcript, so it gave **0 failure
-   tags** to every sub-agent run, while the sub-agents made up to **1,757 tool calls** it never saw. Re-judged on the full
-   trace, every run gets a failure tag. Process grading of multi-agent systems needs the full trace.
-5. **One ambiguous prompt sentence explains most of the error left in the T98G tables.** *"Run DESeq2 separately by cell
-   line and clone contrast"* leads most agents to fit 2-vs-2 models, while the reference fits one model per cell line.
-   About 25% fewer genes reach significance, and the error carries into the GO artifacts. The count matrix is correct in
-   every run.
+## What we did
 
-**→ Full analysis, all figures, per-artifact heatmap and caveats: [results/task9](results/task9/)**
+1. **Made measurements trustworthy first.** The same setup run twice can score 0.07 and then 0.93, so single runs prove
+   nothing. We built a runner for Stanford's Sherlock cluster that reproduces the benchmark's cloud setup: same machine
+   size, same scores within error. It let us run every version **5 times**, up to 24 runs at once.
+2. **Picked one task and tested three ideas, each on top of the previous one.** Task 9 is the REST knockout study: raw
+   reads to 14 tables. Baseline logs showed agents losing time and money installing tools, so we started there:
+   - **a preinstalled environment** with the exact tool versions the paper used;
+   - **a format reviewer:** before a table is published, a second call to the same model checks it against the table's
+     specification. The reviewer never sees the answers;
+   - **a swarm:** an orchestrator that hands each table to its own sub-agent.
+3. **Audited every run** for score, cost, time and failure modes, then fixed what the audit revealed and ran again.
 
-## Where to look
+## What we found
 
-| If you want… | Go to |
-|---|---|
-| All task 9 figures and the detailed analysis | [results/task9](results/task9/) |
-| Task 11 results and the check that our cluster matches the paper's cloud setup | [results/task11](results/task11/) |
-| What exactly a version changes | its branch (table below) → `experiments/<version>.md` |
-| One version's per-run and per-artifact numbers | its branch → `RESULTS.md` |
-| The raw per-run data behind every figure | [results/task9/data/runs.jsonl](results/task9/data/runs.jsonl) |
-| Task 11 "lite" proxy study (can a 30-min task stand in for a 2-h run?) | [iterations/proxy-validation-task11](iterations/proxy-validation-task11/) |
-| How to run the benchmark yourself | [upstream documentation below](#bixbench3-upstream-documentation), [TEAM_SETUP.md](TEAM_SETUP.md) (GCP), [`sherlock/runner`](https://github.com/timothe-chaumont/BixBench3/tree/sherlock/runner) (HPC) |
+| What we added | Score (mean of 5 runs) | Cost per run | Time per run |
+|---|---|---|---|
+| Nothing (baseline) | 0.39 | $2.91 | 2.8 h |
+| Preinstalled environment | 0.57 | $2.08 | 1.8 h |
+| **Environment + format reviewer** | **0.76** | **$2.24** | **1.8 h** |
+| Environment + sub-agent swarm | 0.46 | $10.14 | 5.7 h |
+| *Paper, same model (one run)* | *0.71* | | |
 
-**Words used on this page**
+- **The reviewer is the winner.** The score nearly doubles (0.39 → 0.76, p = 0.024) and ends above the paper's 0.71. It
+  costs less than the baseline, and no reviewer run fell below 0.50. A second pair of eyes beats more compute.
+- **The environment makes the agent faster and cheaper, not smarter.** Setup failures vanish, but the score still swings
+  from 0.07 to 0.93. What remains is scientific judgment, not tooling.
+- **The swarm is expensive and no better.** The audit showed why: one sub-agent spent $3.18 checking 268 times whether a
+  genome index had finished building. Our redesigned swarm (v5) cuts the cost to about $3–4 per run in its first finished
+  runs, but still does not beat the single agent with a reviewer *(preliminary: 4 of 10 runs done)*.
+- **The benchmark's process judge is blind to swarms.** It only reads the top-level conversation. It gave every swarm run
+  0 failure tags while missing up to 1,757 actions taken by sub-agents. Re-judged on the full trace, every
+  swarm run is flagged.
+- **One ambiguous sentence in the task explains most of the remaining errors.** *"Run DESeq2 separately by cell line and
+  clone contrast"* leads most agents to a valid but different statistical design from the paper's. The error then flows
+  into every downstream table.
 
-- **Artifact:** one required output table.
-- **Artifact score:** the grader's 0–1 agreement with the published table.
-- **Task score:** the share of artifacts scoring at least 0.80, the paper's metric.
-- **Version:** one harness configuration, kept on its own branch.
-- **Run:** one independent attempt; we run 5 per version, because single runs of the same setup range from 0.07 to 0.93.
+## Why it matters
 
-## How we ran it (identical for every version)
+Better harnesses are a cheap lever: about 500 lines of reviewer code moved a small model past the paper's result.
+And as AI scientists become multi-agent systems, benchmarks must grade the whole trace, or they will reward agents for
+hiding their mistakes in sub-agents.
+
+## Dig deeper
+
+- **[Full task 9 analysis](results/task9/):** every figure (per-table heatmap, failure modes, cost), statistics and
+  caveats.
+- **[Task 11 results](results/task11/):** the check that the Sherlock runner matches the cloud setup (0.630 ± 0.069
+  against 0.679).
+- **Each experiment's branch:** exactly what changed (`experiments/<version>.md`) and its per-run numbers (`RESULTS.md`).
+  See the branch map below.
+- **[Raw per-run data](results/task9/data/runs.jsonl)** behind every number on this page.
+
+<details>
+<summary><b>How we ran it (identical for every version)</b></summary>
 
 - **Model and limits:** GPT-5.4 Mini at `xhigh` reasoning, the official v1.0.0 task prompt, 24 h / 5,000-message limits.
 - **Grading:** the official BixBench3 grader and process judge.
-- **Hardware:** 6 CPU / 32 GB per run (the GCP VM shape), all on identical AMD EPYC 7502 nodes of Stanford's Sherlock
-  cluster.
-- **Which runs count:** every run that completed is counted, whatever its score. Smoke tests and runs killed by
-  infrastructure problems (API rate limit, relay outage) are excluded.
-- **Paper numbers:** quoted from the paper, never estimated.
-- **Cluster parity:** our baselines reproduce the GCP setup on task 11 (0.630 ± 0.069 over 4 runs on Sherlock, against
-  0.679 for the GCP run) and on task 9 (mean artifact score 0.566 against 0.575).
+- **Hardware:** 6 CPU / 32 GB per run (the benchmark's cloud VM shape), on identical AMD EPYC 7502 Sherlock nodes.
+- **Score:** the task score is the paper's metric, the share of the 14 artifacts with a grader score of at least 0.80.
+- **Statistics:** exact one-sided permutation tests against the baseline, 5 runs vs 5. Reviewer: p = 0.024 on task score
+  and p = 0.012 on mean artifact score. Environment: p = 0.20. Swarm: p = 0.42.
+- **Which runs count:** every completed run, whatever its score. Smoke tests and runs killed by infrastructure problems
+  (API rate limit, relay outage) are excluded. Versions with fewer than 5 finished runs are marked preliminary and make no
+  claims.
+- **Paper numbers:** quoted, never estimated. The paper reports one GPT-5.4 Mini run on task 9 (10 of 14 tables passed),
+  and $8.47 average cost over its 20 tasks.
 
-## Infrastructure we built
+</details>
+
+<details>
+<summary><b>Infrastructure we built</b></summary>
 
 - **Sherlock runner** ([`sherlock/runner`](https://github.com/timothe-chaumont/BixBench3/tree/sherlock/runner)): runs the unchanged benchmark on Stanford's HPC cluster
-  with the GCP VM shape. Sandbox parity fixes: root apt, memory and CPU views, isolation from host processes. A key relay
-  switches OpenAI keys mid-run without interrupting the agent. Up to 24 runs of 6 CPU ran at once, against 5 on a 32-vCPU
-  GCP quota.
+  with the cloud VM shape. Sandbox parity fixes: root apt, memory and CPU views, isolation from host processes. A key
+  relay switches OpenAI keys mid-run without interrupting the agent.
 - **Preinstalled task environments** ([`feat/task-envs-sherlock`](https://github.com/timothe-chaumont/BixBench3/tree/feat/task-envs-sherlock)): per-task images with the
   tool versions the method asks for.
 - **Live dashboard** ([`tools/bixdash`](tools/bixdash/)): every run's phase, cost and score, shared across the team.
 - **6 vCPU team profile** ([TEAM_SETUP.md](TEAM_SETUP.md)) and the adapted GCP runner ([ADAPTED_RUNNER.md](ADAPTED_RUNNER.md)).
+- **Task 11 "lite" proxy study** ([iterations/proxy-validation-task11](iterations/proxy-validation-task11/)): can a
+  30-minute downstream-only task stand in for the 2-hour full run? It is feasible, but ranking preservation is not
+  established.
 
-## Branch map
+</details>
 
-Each experiment lives on its own branch: one branch per task × version, and repeats share a branch. Each branch has
-`experiments/<version>.md` describing exactly what changed. Branches with finished runs also have a `RESULTS.md`.
+<details>
+<summary><b>Branch map: one branch per experiment</b></summary>
 
 | Branch | What it adds | Status |
 |---|---|---|
@@ -118,7 +128,10 @@ Each experiment lives on its own branch: one branch per task × version, and rep
 | [`sherlock/runner`](https://github.com/timothe-chaumont/BixBench3/tree/sherlock/runner), [`feat/task-envs-sherlock`](https://github.com/timothe-chaumont/BixBench3/tree/feat/task-envs-sherlock) | Sherlock runner; per-task environment images | infrastructure |
 | [`setup/adapted-runner`](https://github.com/timothe-chaumont/BixBench3/tree/setup/adapted-runner), [`tools/bixdash`](https://github.com/timothe-chaumont/BixBench3/tree/tools/bixdash) | Earlier snapshots, already merged into `main` | archived |
 
-Upstream baseline commit `d0e0bbb41222335b1b8878f533a58466a3a782dc`, included in this branch history.
+</details>
+
+**Run the benchmark yourself:** see the upstream documentation below, [TEAM_SETUP.md](TEAM_SETUP.md) for GCP and
+[`sherlock/runner`](https://github.com/timothe-chaumont/BixBench3/tree/sherlock/runner) for HPC. Upstream baseline commit `d0e0bbb41222335b1b8878f533a58466a3a782dc`.
 
 ---
 
