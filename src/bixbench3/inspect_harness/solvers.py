@@ -6,6 +6,7 @@ from inspect_ai.solver import Generate, Solver, TaskState, solver
 from inspect_ai.tool import bash_session, python, text_editor
 from inspect_ai.util import sandbox
 
+from .enrichment_validator import validate_enrichment_outputs, validated_agent_submit
 from .model_info import register_model_info
 from .tools import request_web_access
 
@@ -20,7 +21,9 @@ def bixbench3_agent() -> Agent:
             python(timeout=600),
             text_editor(timeout=120),
             request_web_access(),
+            validate_enrichment_outputs(),
         ],
+        submit=validated_agent_submit(),
         compaction=CompactionAuto(),
     )
 

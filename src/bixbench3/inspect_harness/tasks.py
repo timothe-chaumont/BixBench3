@@ -4,11 +4,13 @@ import os
 from pathlib import Path
 
 from inspect_ai import Task, task
+from inspect_ai.solver import chain
 
 from bixbench3.inspect_harness.dataset import (
     DEFAULT_TIME_LIMIT_SECONDS,
     load_cases_dataset,
 )
+from bixbench3.inspect_harness.enrichment_validator import enrichment_validator_setup
 from bixbench3.inspect_harness.scorers import output_collection
 from bixbench3.inspect_harness.solvers import (
     bixbench3_agent,
@@ -36,7 +38,7 @@ def bixbench3_cases(
             case_ids,
             time_limit_seconds=TIME_LIMIT_SECONDS,
         ),
-        setup=prepare_case_workspace(),
+        setup=chain(prepare_case_workspace(), enrichment_validator_setup()),
         solver=bixbench3_agent(),
         scorer=output_collection(),
         sandbox=("docker", compose_path),
