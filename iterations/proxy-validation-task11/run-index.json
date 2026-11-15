@@ -1,0 +1,114 @@
+[
+  {
+    "job_id": "infra_cost_config_full",
+    "status_at_cutoff": "pending_or_infrastructure_attempt",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v2",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T112731417491Z"
+  },
+  {
+    "job_id": "infra_cost_config_lite",
+    "status_at_cutoff": "pending_or_infrastructure_attempt",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v2",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T112729640385Z"
+  },
+  {
+    "job_id": "s1_full_baseline_r1_b7200",
+    "status_at_cutoff": "completed",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v2",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T113231513685Z"
+  },
+  {
+    "job_id": "s1_lite_baseline_r1_b600",
+    "status_at_cutoff": "completed",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v2",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T113230756911Z"
+  },
+  {
+    "job_id": "s1_lite_reference_resource_r1_b1200",
+    "status_at_cutoff": "completed",
+    "harness_commit": "cf3ddff2ce0450b2402d14dd8285fe5a2cd8da0d",
+    "profile": "task11-prospective-v2",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T124634087783Z"
+  },
+  {
+    "job_id": "s1_lite_statistical_background_r1_b1200",
+    "status_at_cutoff": "completed",
+    "harness_commit": "99ec954c370b74b774aee601e19e4c502d6bd8d7",
+    "profile": "task11-prospective-v2",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T122207410308Z"
+  },
+  {
+    "job_id": "v3_s1_full_baseline_r1_b10800",
+    "status_at_cutoff": "pending_or_infrastructure_attempt",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T190359895629Z"
+  },
+  {
+    "job_id": "v3_s1_full_baseline_r1_b7200",
+    "status_at_cutoff": "completed",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T134846082276Z"
+  },
+  {
+    "job_id": "v3_s1_lite_baseline_r1_b1800",
+    "status_at_cutoff": "completed",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T190400739194Z"
+  },
+  {
+    "job_id": "v3_s1_lite_baseline_r1_b600",
+    "status_at_cutoff": "completed",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T134847714105Z"
+  },
+  {
+    "job_id": "v3_s1_lite_critic_r1_b1800",
+    "status_at_cutoff": "completed",
+    "harness_commit": "15368235160ac52027c8a1b12e71ebc8956e22c7",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T193907997846Z"
+  },
+  {
+    "job_id": "v3_s1_lite_critic_r1_b600",
+    "status_at_cutoff": "completed",
+    "harness_commit": "15368235160ac52027c8a1b12e71ebc8956e22c7",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T152745397617Z"
+  },
+  {
+    "job_id": "v3_s1_lite_reference_resource_r1_b1200",
+    "status_at_cutoff": "completed",
+    "harness_commit": "cf3ddff2ce0450b2402d14dd8285fe5a2cd8da0d",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T144220729594Z"
+  },
+  {
+    "job_id": "v3_s1_lite_statistical_background_r1_b1200",
+    "status_at_cutoff": "completed",
+    "harness_commit": "99ec954c370b74b774aee601e19e4c502d6bd8d7",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T140221269253Z"
+  },
+  {
+    "job_id": "v3_s1_lite_statistical_background_r1_b1800",
+    "status_at_cutoff": "completed",
+    "harness_commit": "99ec954c370b74b774aee601e19e4c502d6bd8d7",
+    "profile": "task11-prospective-v3",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T202144470964Z"
+  },
+  {
+    "job_id": "v4_s1_lite_baseline_r1_b1800",
+    "status_at_cutoff": "pending_or_infrastructure_attempt",
+    "harness_commit": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "profile": "task11-prospective-v4",
+    "results_uri": "gs://bixbench3-task11-jex20-results/10.1016_j.crtox.2021.01.003_v1/openai-gpt-5-4-mini/20261115T205539809114Z"
+  }
+]

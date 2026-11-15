@@ -1,0 +1,89 @@
+{
+  "cutoff_utc": "2026-11-15T21:21:32.828689+00:00",
+  "completed_runs_excluding_diagnostic": 12,
+  "completed_actor_api_usd_including_diagnostic": 14.23899495,
+  "diagnostic_actor_usd": 0.366999,
+  "compute": {
+    "source": "GCE start/stop operations and public Iowa retail rates",
+    "window_start": "2026-11-15T08:55:08+00:00",
+    "window_end": "2026-11-15T21:21:32.828689+00:00",
+    "vm_hours": 17.607974827222222,
+    "intervals": [
+      {
+        "vm": "arb-run-10-1101-2025-06-02-657493-v1-6a1d1e92df",
+        "start": "2026-11-15T10:56:12.776000+00:00",
+        "end": "2026-11-15T11:30:45.343000+00:00",
+        "hours": 0.5757130555555555
+      },
+      {
+        "vm": "arb-run-10-1101-2025-06-02-657493-v1-6a1d1e92df",
+        "start": "2026-11-15T11:31:43.466000+00:00",
+        "end": "2026-11-15T13:46:58.483000+00:00",
+        "hours": 2.254171388888889
+      },
+      {
+        "vm": "arb-run-10-1101-2025-06-02-657493-v1-6a1d1e92df",
+        "start": "2026-11-15T13:47:58.591000+00:00",
+        "end": "2026-11-15T16:56:24.470000+00:00",
+        "hours": 3.1405219444444445
+      },
+      {
+        "vm": "arb-run-10-1101-2025-06-02-657493-v1-6a1d1e92df",
+        "start": "2026-11-15T19:03:16.502000+00:00",
+        "end": "2026-11-15T21:21:32.828689+00:00",
+        "hours": 2.3045351913888887
+      },
+      {
+        "vm": "arb-run-10-1016-j-crtox-2021-01-003-v1-928ba8dbdc",
+        "start": "2026-11-15T08:55:08.092000+00:00",
+        "end": "2026-11-15T11:29:49.213000+00:00",
+        "hours": 2.5780891666666665
+      },
+      {
+        "vm": "arb-run-10-1016-j-crtox-2021-01-003-v1-928ba8dbdc",
+        "start": "2026-11-15T11:31:43.804000+00:00",
+        "end": "2026-11-15T13:46:02.851000+00:00",
+        "hours": 2.2386241666666664
+      },
+      {
+        "vm": "arb-run-10-1016-j-crtox-2021-01-003-v1-928ba8dbdc",
+        "start": "2026-11-15T13:47:58.584000+00:00",
+        "end": "2026-11-15T16:02:42.111000+00:00",
+        "hours": 2.2454241666666666
+      },
+      {
+        "vm": "arb-run-10-1016-j-crtox-2021-01-003-v1-928ba8dbdc",
+        "start": "2026-11-15T19:03:16.502000+00:00",
+        "end": "2026-11-15T20:15:45.293000+00:00",
+        "hours": 1.2079975
+      },
+      {
+        "vm": "arb-run-10-1016-j-crtox-2021-01-003-v1-928ba8dbdc",
+        "start": "2026-11-15T20:17:46.395000+00:00",
+        "end": "2026-11-15T21:21:32.828689+00:00",
+        "hours": 1.0628982469444443
+      }
+    ],
+    "rates_usd": {
+      "vcpu_hour": 0.03319155,
+      "memory_gib_hour": 0.00444885,
+      "external_ipv4_hour": 0.005,
+      "standard_disk_gib_hour_730h_month": 5.479452054794521e-05,
+      "balanced_disk_gib_hour_730h_month": 0.00013698630136986303
+    },
+    "components_usd": {
+      "vcpu_and_ram_usd": 6.013343503181729,
+      "ipv4_usd": 0.08803987413611111,
+      "two_retained_200gib_boot_disks_usd": 0.27266257953729073,
+      "retained_18gib_shared_input_disk_usd": 0.030674540197945212
+    },
+    "estimated_total_usd": 6.404720497053076,
+    "limitations": "Operation start timestamps approximate RUNNING/STOPPING billing boundaries. Retained disks charged through entire window. Excludes GCS, Artifact Registry, machine-image storage, network transfer, existing dashboard, unrelated disks, discounts, taxes and provider billing reconciliation."
+  },
+  "exclusions": [
+    "active actor usage",
+    "network broker adjudication",
+    "this Codex session",
+    "other storage/services and invoice adjustments"
+  ]
+}

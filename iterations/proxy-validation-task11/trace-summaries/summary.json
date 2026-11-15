@@ -1,0 +1,63 @@
+{
+  "s1_full_baseline_r1_b7200": {
+    "model_events": 286,
+    "tool_events": 286,
+    "tool_categories": {
+      "other": 120,
+      "input_schema": 20,
+      "polling_or_wait": 39,
+      "package_setup": 7,
+      "read_counting": 41,
+      "enrichment": 33,
+      "api_documentation": 13,
+      "code_editing": 8,
+      "differential_expression": 5
+    },
+    "tool_output_error_markers": 17
+  },
+  "v3_s1_full_baseline_r1_b7200": {
+    "model_events": 353,
+    "tool_events": 359,
+    "tool_categories": {
+      "other": 73,
+      "polling_or_wait": 165,
+      "input_schema": 22,
+      "read_counting": 52,
+      "package_setup": 4,
+      "enrichment": 14,
+      "api_documentation": 20,
+      "code_editing": 6,
+      "differential_expression": 3
+    },
+    "tool_output_error_markers": 21
+  },
+  "v3_s1_lite_baseline_r1_b1800": {
+    "model_events": 112,
+    "tool_events": 112,
+    "tool_categories": {
+      "input_schema": 10,
+      "polling_or_wait": 62,
+      "other": 8,
+      "api_documentation": 10,
+      "enrichment": 11,
+      "differential_expression": 4,
+      "code_editing": 7
+    },
+    "tool_output_error_markers": 10
+  },
+  "v3_s1_lite_statistical_background_r1_b1800": {
+    "model_events": 108,
+    "tool_events": 120,
+    "tool_categories": {
+      "other": 22,
+      "input_schema": 13,
+      "enrichment": 12,
+      "polling_or_wait": 53,
+      "api_documentation": 4,
+      "differential_expression": 8,
+      "code_editing": 7,
+      "read_counting": 1
+    },
+    "tool_output_error_markers": 9
+  }
+}
