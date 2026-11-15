@@ -109,3 +109,20 @@ def test_final_inspect_usage_sidecar_takes_precedence_over_live_history(server, 
     assert result['cost_usd'] == 3.4
     assert result['elapsed_s'] == 8620
     assert result['is_lower_bound'] is False
+
+
+def test_authoritative_final_usage_overrides_zero_terminal_observer_values(server, tmp_path):
+    import json
+    folder = tmp_path / "run"
+    folder.mkdir()
+    terminal = {"score_is_final": True, "cost_usd": 0, "n_model_calls": 0,
+                "tokens_total": 0, "elapsed_s": 1800}
+    exact = {"source": "final_inspect_eval", "cost_usd": 1.25, "n_model_calls": 112,
+             "tokens_total": 9092631, "elapsed_s": 1801.231}
+    (folder / "latest.json").write_text(json.dumps(terminal))
+    (folder / "final_usage.json").write_text(json.dumps(exact))
+    result = server.Source(str(tmp_path)).run("run")
+    assert result["latest"] == terminal
+    assert result["comparison_budget"]["cost_usd"] == 1.25
+    assert result["comparison_budget"]["n_model_calls"] == 112
+    assert not result["comparison_budget"]["is_lower_bound"]

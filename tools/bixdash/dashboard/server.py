@@ -79,10 +79,6 @@ class Source:
         """
         if not latest.get("score_is_final"):
             return None
-        if all(latest.get(k) is not None for k in ("cost_usd", "n_model_calls")) and (
-            latest.get("tokens") is not None or latest.get("tokens_total") is not None
-        ):
-            return None
         exact_text = self._read(f"{run_id}/final_usage.json")
         if exact_text:
             exact = json.loads(exact_text)
@@ -92,6 +88,10 @@ class Source:
             ):
                 return {k: exact.get(k) for k in (*fields, "ts")} | {
                     "source": "final_inspect_eval", "is_lower_bound": False}
+        if all(latest.get(k) is not None for k in ("cost_usd", "n_model_calls")) and (
+            latest.get("tokens") is not None or latest.get("tokens_total") is not None
+        ):
+            return None
         candidates = [h for h in self.history(run_id)
                       if all(h.get(k) is not None for k in
                              ("cost_usd", "n_model_calls", "tokens_total", "elapsed_s"))]
