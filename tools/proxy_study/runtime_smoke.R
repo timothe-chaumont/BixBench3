@@ -10,7 +10,7 @@ stopifnot(nrow(z)==100,all(c('log2FoldChange','stat','pvalue','padj') %in% names
 stat<-setNames(z$stat,rownames(z));stat<-stat[is.finite(stat)]
 sets<-data.frame(gene=names(stat),set=rep(paste0('synthetic_set_',1:5),length.out=length(stat)))
 gsc<-loadGSC(sets)
-gsa<-runGSA(geneLevelStats=stat,gsc=gsc,geneSetStat='mean',signifMethod='geneSampling',adjMethod='fdr',gsSizeLim=c(5,500),nPerm=50,verbose=FALSE)
+gsa<-runGSA(geneLevelStats=stat,gsc=gsc,geneSetStat='mean',signifMethod='geneSampling',adjMethod='fdr',gsSizeLim=c(5,500),nPerm=1000,verbose=FALSE)
 summary<-GSAsummaryTable(gsa);stopifnot(nrow(summary)==5)
 cat('FUNCTIONAL_SMOKE_OK: DESeq2 results and PIANO gene-set analysis\n')
 cat('PIANO summary columns:',paste(names(summary),collapse=', '),'\n')

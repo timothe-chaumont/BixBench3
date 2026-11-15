@@ -4,6 +4,7 @@ import argparse
 import dataclasses
 import hashlib
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,10 @@ def digest(p):
 
 def prepare_case(work, inputs, original, mode, profile="v2"):
     dataset = work / "dataset"
+    if dataset.exists():
+        history = work / "staging_attempts" / datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+        history.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(dataset), str(history))
     gcp.stage_hf_case(original, dataset)
     case = json.loads((dataset / "case.json").read_text())
     text = (inputs / "original-prompt.md").read_text()
@@ -268,6 +273,10 @@ def main():
     work = Path(a.work_dir).resolve()
     work.mkdir(parents=True, exist_ok=True)
     inputs = Path(a.inputs_dir).resolve()
+    if (work / "launch.json").exists():
+        raise RuntimeError(
+            "This job already has a launch manifest; collect or resume it instead of relaunching"
+        )
     original = gcp.load_public_task("11")
     case = prepare_case(work, inputs, original, a.mode, a.profile)
     subprocess.run(
