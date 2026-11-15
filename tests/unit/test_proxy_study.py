@@ -55,3 +55,32 @@ def test_nested_critic_model_call_is_counted_once():
     calls = [e for e in flat if e.event == "model" and not e.pending]
     assert len(calls) == 1
     assert len(flat) == 2
+
+
+def test_compute_estimate_excludes_stopped_cpu_but_retains_disk_charge():
+    from datetime import datetime
+
+    p = Path(__file__).resolve().parents[2] / "tools/proxy_study/compute_cost.py"
+    spec = importlib.util.spec_from_file_location("proxy_compute", p)
+    compute = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(compute)
+    rows = [
+        {"targetLink": "/vm", "operationType": action, "startTime": timestamp}
+        for action, timestamp in [
+            ("start", "2026-11-15T00:00:00+00:00"),
+            ("stop", "2026-11-15T01:00:00+00:00"),
+            ("start", "2026-11-15T02:00:00+00:00"),
+            ("stop", "2026-11-15T03:00:00+00:00"),
+        ]
+    ]
+    result = compute.estimate(
+        rows,
+        datetime.fromisoformat(rows[0]["startTime"]),
+        datetime.fromisoformat(rows[-1]["startTime"]),
+    )
+    assert result["vm_hours"] == 2
+    assert result["components_usd"]["ipv4_usd"] == 2 * compute.IPV4_H
+    assert (
+        result["components_usd"]["two_retained_200gib_boot_disks_usd"]
+        == 3 * 400 * compute.STANDARD_GIB_H
+    )
