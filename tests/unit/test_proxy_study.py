@@ -21,3 +21,11 @@ def test_inversion_is_not_success_despite_two_sided_significance():
  assert r['spearman_rho']<-.99
  assert r['pairwise_directional_agreement']==0
  assert not r['full_winner_in_lite_top2']
+
+
+def test_top2_tie_is_not_guaranteed_retention():
+ x={'a':.1,'b':.3,'c':.5,'d':.8}
+ y={'a':0.,'b':1.,'c':1.,'d':1.}
+ r=analysis.compare(x,y)
+ assert not r['full_winner_in_lite_top2']
+ assert len(r['lite_top2_including_ties'])==3
