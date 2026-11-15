@@ -17,7 +17,7 @@ COUNT='tempo_seq_filtered_counts'
 
 def digest(p):return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
-def prepare_case(work,inputs,original,mode):
+def prepare_case(work,inputs,original,mode,profile="v2"):
     dataset=work/'dataset';gcp.stage_hf_case(original,dataset)
     case=json.loads((dataset/'case.json').read_text())
     text=(inputs/'original-prompt.md').read_text()
@@ -32,6 +32,8 @@ Reference resources under data/reference include Ensembl 100 orthologs and MSigD
 references. These are shared preparation choices for both full and lite runs;
 record the package patch versions and frozen-reference adaptation in METHODS.md.
 '''
+    if profile=='v3':
+        common+='''\nInput preparation v3: the data tree is mounted at /data (absolute path).\nThe installed R package name is lowercase `piano`: `library(piano)` and\n`packageVersion("piano")` work. The uppercase product name PIANO is not\na second R package to install. Check lowercase before attempting installation.\nThe original DNA-damage workbook is retained unchanged under /data/metadata.\n/data/reference/curated-dna-damage-all-sets.gmt contains the exact same 89\ngene-set names, source URLs and member genes, converted once to a text format.\nIt includes the set that the method guidance asks you to exclude; apply the\noriginal exclusion and background rules yourself. Its conversion provenance is\nin curated-dna-damage-all-sets.provenance.json. No statistical results are supplied.\nSample metadata columns: library_id, geo_accession, treatment_ppm (e.g. 0ppm),\ntimepoint (day7/day28/day90), organism, tissue, strain.\n\n'''
     if mode=='lite':
         case['expected_outputs']=[a for a in case['expected_outputs'] if a['artifact_id']!=COUNT]
         outputs='\n### '.join(p for p in outputs.split('\n### ') if not p.lstrip().startswith('`tempo_seq_filtered_counts`'))
@@ -60,13 +62,13 @@ class StudyRunner(gcp.GCPRunner):
         p=super().build_run_plan(**kwargs);old=p.layout.vm_name
         commands={k:tuple(a.replace(old,self.vm) for a in v) for k,v in p.commands.items()}
         argv=tuple('/opt/bixbench3/tools/proxy_study/inspect_task.py@proxy_study' if a.endswith('/inspect_harness/tasks.py@bixbench3_cases') else a for a in p.inspect_argv)
-        argv+=('-T',f'budget_seconds={self.budget}','--model-cost-config','/opt/bixbench3/tools/proxy_study/model-costs.json')
+        argv+=('-T',f'budget_seconds={self.budget}','-T',f'study_profile={self.profile}','--model-cost-config','/opt/bixbench3/tools/proxy_study/model-costs.json')
         p=dataclasses.replace(p,layout=dataclasses.replace(p.layout,vm_name=self.vm),commands=commands,inspect_argv=argv)
         self.plan=p
         return p
     def _initial_manifest(self,*args,**kwargs):
         m=super()._initial_manifest(*args,**kwargs)
-        m['study_profile']={'version':'task11-prospective-v2','job_id':self.job_id,'mode':self.mode,
+        m['study_profile']={'version':'task11-prospective-'+self.profile,'job_id':self.job_id,'mode':self.mode,
           'variant':self.variant,'replicate':self.replicate,'harness_commit':self.commit,
           'harness_archive_sha256':digest(self.work/'harness.tar.gz'),'actor_budget_s':self.budget,
           'common_downstream_artifacts':4,'scored_artifacts':4 if self.mode=='lite' else 5,
@@ -77,7 +79,7 @@ class StudyRunner(gcp.GCPRunner):
     def _install_live_tracking(self,p):
         base=('gcloud','--project',self.project)
         self.executor.run(gcp.ssh_argv(base,self.vm,p.zone,('bash','-c','rm -rf ~/proxy-study-code ~/proxy-study-inputs')))
-        for src,dst in [(HERE,'proxy-study-code'),(self.work/'harness.tar.gz','harness.tar.gz'),(self.inputs/'upload','proxy-study-inputs'),(HERE.parent/'task11_lite/grade_lite.py','grade_lite.py')]:
+        for src,dst in [(HERE,'proxy-study-code'),(self.work/'harness.tar.gz','harness.tar.gz'),(self.inputs/('upload-v3' if self.profile=='v3' else 'upload'),'proxy-study-inputs'),(HERE.parent/'task11_lite/grade_lite.py','grade_lite.py')]:
             recursive=('--recurse',) if src.is_dir() else ()
             self.executor.run((*base,'compute','scp',*recursive,str(src),f'{self.vm}:~/{dst}',f'--zone={p.zone}'))
         data=f'/var/lib/bixbench3/study_inputs/{p.layout.run_id}'
@@ -113,7 +115,7 @@ sudo mount -o remount,bind,ro {data}/raw
         self.executor.run(gcp.ssh_argv(base,self.vm,p.zone,('bash','-s')),input_text=script)
         # Supply explicit scope before the first observer snapshot.
         meta={'task_id':p.task.task_id,'time_limit_s':self.budget,'owner':'timothe',
-              'evaluation_scope':f'proxy-study-{self.mode}-v2','study_job_id':self.job_id}
+              'evaluation_scope':f'proxy-study-{self.mode}-{self.profile}','study_job_id':self.job_id}
         script="sudo mkdir -p /var/lib/bixdash; sudo chmod 700 /var/lib/bixdash; sudo sh -c 'cat > /var/lib/bixdash/run_meta.json'"
         self.executor.run(gcp.ssh_argv(base,self.vm,p.zone,('bash','-c',script)),input_text=json.dumps(meta))
         super()._install_live_tracking(p)
@@ -145,8 +147,9 @@ def main():
     for name in ['project','vm','mode','variant','commit','job-id','work-dir','inputs-dir','repo-root','source-repo']:
         ap.add_argument('--'+name,required=True)
     ap.add_argument('--budget',type=int,required=True);ap.add_argument('--replicate',type=int,default=1)
+    ap.add_argument('--profile',choices=['v2','v3'],default='v2')
     a=ap.parse_args();work=Path(a.work_dir).resolve();work.mkdir(parents=True,exist_ok=True);inputs=Path(a.inputs_dir).resolve()
-    original=gcp.load_public_task('11');case=prepare_case(work,inputs,original,a.mode)
+    original=gcp.load_public_task('11');case=prepare_case(work,inputs,original,a.mode,a.profile)
     subprocess.run(['git','archive','--format=tar.gz','-o',str(work/'harness.tar.gz'),a.commit,'src/bixbench3/inspect_harness'],cwd=a.source_repo,check=True)
     executor=PreparedExecutor(a.vm)
     value=executor.run(('gcloud','--project',a.project,'compute','instances','describe',a.vm,'--zone=us-central1-a','--format=json'),capture_output=True)
@@ -154,14 +157,14 @@ def main():
     if not vm['machineType'].endswith('/n2-custom-6-32768'):raise ValueError('Wrong VM shape')
     if not any(d.get('deviceName')=='bixbench3-data' and original.input_manifest_sha256[:12] in d.get('source','') and d.get('mode')=='READ_ONLY' for d in vm['disks']):raise ValueError('Wrong data disk or writable data')
     archive_previous(executor,a.project,a.vm)
-    task=dataclasses.replace(original,task_id='11-study-'+a.mode+'-v2')
+    task=dataclasses.replace(original,task_id='11-study-'+a.mode+'-'+a.profile)
     settings=RuntimeSettings(machine_type='n2-custom-6-32768',boot_disk_gb=200,boot_disk_type='pd-standard',
       boot_disk_source=next(d['source'].rsplit('/',1)[-1] for d in vm['disks'] if d.get('boot')),include_10x=False,runtime_image_name='bixbench3-runtime-v1-0-0-r7-task11-no10x',
       time_limit_seconds=a.budget,message_limit=5000,analyst_cost_limit=6 if a.mode=='full' else 2,
-      track_live=True,run_description=f'Proxy study v2 | {a.mode} | {a.variant} | {a.budget//60}min | repeat {a.replicate}',
-      run_condition='baseline-proxy-study-v2' if a.variant=='baseline' else a.variant+'-proxy-study-v2',tracking_grade_every=0)
+      track_live=True,run_description=f'Proxy study {a.profile} | {a.mode} | {a.variant} | {a.budget//60}min | repeat {a.replicate}',
+      run_condition='baseline-proxy-study-'+a.profile if a.variant=='baseline' else a.variant+'-proxy-study-'+a.profile,tracking_grade_every=0)
     runner=StudyRunner(project=a.project,executor=executor,settings=settings,repo_root=Path(a.repo_root),runs_root=Path(a.repo_root)/'runs')
-    for key,val in {'vm':a.vm,'mode':a.mode,'variant':a.variant,'commit':a.commit,'replicate':a.replicate,'budget':a.budget,'job_id':a.job_id,'work':work,'inputs':inputs}.items():setattr(runner,key,val)
+    for key,val in {'profile':a.profile,'vm':a.vm,'mode':a.mode,'variant':a.variant,'commit':a.commit,'replicate':a.replicate,'budget':a.budget,'job_id':a.job_id,'work':work,'inputs':inputs}.items():setattr(runner,key,val)
     original_script=gcp.remote_run_script
     def script(plan,settings):
         text=original_script(plan,settings)
