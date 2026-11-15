@@ -117,3 +117,13 @@ def test_retry_preserves_failed_staging_before_restaging(tmp_path, monkeypatch):
     assert len(saved) == 1
     assert saved[0].read_text() == "Failed-attempt evidence"
     assert not (work / "dataset/debug-marker.txt").exists()
+
+
+def test_empty_gene_set_url_never_consumes_the_first_gene():
+    p = Path(__file__).resolve().parents[2] / "tools/proxy_study/prepare_metadata.py"
+    spec = importlib.util.spec_from_file_location("proxy_metadata", p)
+    metadata = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(metadata)
+    fields = metadata.gene_set_fields(("TGxDDI_genes", None, "ACTA2", "BAX", None))
+    assert fields == ["TGxDDI_genes", "", "ACTA2", "BAX"]
+    assert "\t".join(fields).split("\t")[2:] == ["ACTA2", "BAX"]

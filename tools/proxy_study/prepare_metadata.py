@@ -5,10 +5,19 @@ import hashlib
 import json
 from pathlib import Path
 
-from openpyxl import load_workbook
+
+def gene_set_fields(row):
+    """Keep the description slot even when the workbook URL cell is empty."""
+    return [
+        str(row[0]),
+        "" if row[1] is None else str(row[1]),
+        *[str(v) for v in row[2:] if v is not None],
+    ]
 
 
 def convert(source, dest):
+    from openpyxl import load_workbook
+
     wb = load_workbook(source, read_only=True, data_only=True)
     assert len(wb.worksheets) == 1
     rows = list(wb.worksheets[0].iter_rows(values_only=True))
@@ -16,7 +25,7 @@ def convert(source, dest):
     for row in rows[2:]:
         if row[0] is None:
             continue
-        values = [str(v) for v in row if v is not None]
+        values = gene_set_fields(row)
         assert len(values) >= 3 and not any("\t" in v or "\n" in v for v in values)
         sets.append(values)
     assert len(sets) == 89
@@ -29,7 +38,7 @@ def convert(source, dest):
         "worksheet": wb.worksheets[0].title,
         "source_rows_1_based": "3:91",
         "sets": len(sets),
-        "operation": "one-pass conversion of non-empty input cells to GMT; original excluded set is retained; no statistical analysis, filtering, or downstream target used",
+        "operation": "one-pass conversion preserving name, description slot (including blank URL), and every member gene; original excluded set is retained; no statistical analysis, filtering, or downstream target used",
     }
     dest.with_suffix(".provenance.json").write_text(json.dumps(provenance, indent=2) + "\n")
     return provenance

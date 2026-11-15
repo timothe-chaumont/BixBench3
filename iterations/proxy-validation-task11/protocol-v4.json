@@ -1,0 +1,112 @@
+{
+  "study": "Task 11 proxy validation V4: corrected source metadata, 30-minute lite / 3-hour full",
+  "status": "preregistered before prospective study runs",
+  "pilot": "Downstream v1 baseline at 600s reached its time limit with no artifacts; it is diagnostic only and excluded from confirmation.",
+  "model": "openai/gpt-5.4-mini",
+  "reasoning_effort": "xhigh",
+  "hardware": "6 vCPU, 32 GiB, 200 GB pd-standard; one active run per VM",
+  "arms": {
+    "baseline": "d0e0bbb41222335b1b8878f533a58466a3a782dc",
+    "named_tool": "cb9544e85bcd31b37e5d1068dc0c3b4611c0517c",
+    "reference_resource": "cf3ddff2ce0450b2402d14dd8285fe5a2cd8da0d",
+    "enrichment_precision": "79f74ce5674bebe5d7e214db20653d37a19fe70a",
+    "statistical_background": "99ec954c370b74b774aee601e19e4c502d6bd8d7",
+    "critic": "15368235160ac52027c8a1b12e71ebc8956e22c7"
+  },
+  "full": {
+    "input": "all 85 original FASTQs and original metadata",
+    "agent_budget_s": 10800,
+    "scored_artifacts": 5
+  },
+  "lite": {
+    "input": "all 85 libraries and 30146 probes in supplied official counts; no FASTQs",
+    "discovery_budgets_s": [
+      1800
+    ],
+    "scored_artifacts": 4
+  },
+  "common_preparation": {
+    "R": "4.0.2",
+    "DESeq2": "1.28.0",
+    "biomaRt": "2.44.0",
+    "PIANO": "2.4.0",
+    "references": "identical frozen Ensembl 100 Compara mapping and MSigDB 6.2 gene sets in both fidelities",
+    "adaptations": [
+      "DESeq2/biomaRt patch versions differ from original task",
+      "BioMart archive redirects; official Ensembl 100 FTP-derived mapping replaces live query",
+      "full keeps raw-read counting requirement and QuasR guidance",
+      "Python scientific runtime made available consistently",
+      "only the runtime limit is overridden in the selected committed harness"
+    ],
+    "process_judge": "Disabled equally for prospective runs: primary outcome is deterministic artifact score. Network adjudication remains unchanged. Historical judge results are not pooled.",
+    "message_limit": 5000,
+    "additional_v3": [
+      "Same immutable runtime image proxy-study-v2, no new statistical tools or answer files.",
+      "Explicit absolute input mount /data and existing public sample-metadata schema.",
+      "Clarify lowercase R package piano; no analysis parameters or code supplied.",
+      "Original workbook retained plus one-pass exact conversion of all 89 input gene sets to GMT, including the originally excluded set. No gene filtering or downstream answers.",
+      "Same additional metadata and package-name information supplied to full and lite."
+    ],
+    "curated_input_conversion": {
+      "source_sha256": "2a3a362e5c85e685eb94638c5cb2683ea8d37ba5ea29a02cac9ec8b04da694cd",
+      "gmt_sha256": "020d2727f516a186ff42c253d37780ab004028366593b7c36684c53418437615",
+      "n_sets_including_excluded": 89,
+      "verified_TGxDDI_members": 64
+    }
+  },
+  "stage_1": "Six pinned arms: one full10800s/6USD and one lite1800s/2USD each, same corrected V4 inputs. Initial baseline pair; registered seed for remaining order. Existing shorter or V3 outcomes are not pooled.",
+  "stage_2": "Six fixed independent repeats at the same budgets. To avoid idle VMs, a preallocated repeat queue may start after the lite discovery panel is complete and nonconstant while the final discovery full jobs are still running. No variant is chosen from a ranking. Once complete discovery full scores are known, a constant full vector cancels unstarted repeats. All dispatched repeats are reported separately, including incomplete panels.",
+  "adaptive_extension": "If lite discovery is constant while full discovery is nonconstant, baseline and enrichment_precision at2400s are diagnostics only. A constant reference or proxy cannot validate ranking.",
+  "randomization_seed": 20261115,
+  "randomization_note": "Fixed initial baseline pair; remaining stage1 ordering uses20261115. Confirmation ordering uses20261116, fixed before V3 outcomes. API generation seeds are not claimed controlled.",
+  "primary_comparison": "Mean of the four common downstream artifact scores. Full five-artifact score and count score are also reported separately.",
+  "metrics": [
+    "Spearman rho",
+    "Kendall tau-b",
+    "exact permutation test across arm means",
+    "pairwise directional agreement for full gaps >= 0.05",
+    "whether the full winner is in lite top 2",
+    "false elimination of promising arms",
+    "per-artifact agreement",
+    "replicate variability",
+    "API cost",
+    "actor wall time",
+    "setup/grading overhead",
+    "compute estimate"
+  ],
+  "support_criteria": {
+    "rho_at_least": 0.8,
+    "pairwise_agreement_at_least": 0.8,
+    "full_winner_in_lite_top_2": true,
+    "permutation_p_at_most": 0.05,
+    "confirmation_required": true
+  },
+  "interpretation": "Even passing supports this fixed task/model/harness panel and prepared environment only; it is not proof for unseen tasks/models or the original cold environment. Pairs/genes/contrasts are not independent replicates. Report ties, uncertainty, and selection bias.",
+  "censoring": "Time/cost-limited scientific runs remain valid censored observations. Infrastructure failures are retained, diagnosed, and retried at most once after repair; never silently scored as scientific zeros.",
+  "stopping": {
+    "additional_openai_usd_max": 80,
+    "per_full_actor_cost_limit_usd": 6,
+    "per_lite_actor_cost_limit_usd": 2,
+    "reserved_judge_and_broker_usd_per_run": "1 USD reservation while active; actual broker billing not inferred from actor tokens; prepaid API balance with auto-reload OFF is the hard external ceiling",
+    "additional_compute_usd_max": 25,
+    "study_wall_hours_max": 30,
+    "do_not_enable_auto_reload_or_paid_GCP": true,
+    "absolute_study_deadline_utc": "2026-11-16T17:34:16+00:00",
+    "budget_includes_all_v1_v2_development": true,
+    "actor_soft_ceiling_usd": 78
+  },
+  "secondary": "Deterministic count-source sensitivity and binomial count-thinning depth curves, clearly separated from agent validation. No universal scaling law will be claimed from a small budget grid.",
+  "registered_at_utc": "2026-11-15T20:44:41.220940+00:00",
+  "amendments": [
+    "V3 is an independently labeled prepared-input study after V2 diagnostic failures, not a retroactive repair of V2 validation. No V3 outcomes exist at registration.",
+    "Scheduling fixes: gather final JSONs in one read-only SSH call; defer trace downloads to independent REST harvesting; reuse completed observations and preserve active actors during local controller restarts.",
+    "Confirmation is attempted only if all six V3 full arms and corresponding discovery lite arms finish within remaining budgets. Incomplete panels cannot pass the preregistered support criteria.",
+    "Budget amendment registered after V3 diagnostics, before any full10800s or lite1800s outcome. Extend wall ceiling to accommodate external SSH outage and paired replication. This is an adaptive study, not an untouched initial preregistration. Reporting includes every protocol version and censoring event.",
+    "V4 is frozen before any V4 outcome. Auxiliary source-conversion defect corrected and regression-tested. Runtime functional checks use validPIANO1000permutations and do not change the image or expose their synthetic fixtures to actors. Ongoing V3 actors finish and are collected without interruption before their VM slot switches to V4."
+  ],
+  "prior_development": "All V1/V2/V3 outcomes, including ongoing V3 jobs, are development only and excluded from V4 paired validation. V3 auxiliary GMT incorrectly interpreted TGxDDI ACTA2 as its description because its source URL is blank. The original workbook remained intact, but the helper had63ratherthan64members. V4 corrects this, preserves blank descriptions, and independently checks every name, description, gene and order against all89source rows.",
+  "amendment_reason": "User clarified that tens of minutes, rather than exactly10minutes, is the objective. V3 baseline full7200s completed validly but was censored with only counts; local SSH interruption hid the completed bundle, now recovered. Longer full budget reduces a counting-stage floor in the reference. All completed shorter observations remain diagnostic and are not averaged into the new matched panel.",
+  "tie_rule": "Top-two retention is conservative: at least one full optimum must be guaranteed a lite rank<=2 under arbitrary ordering of tied lite scores. Also report expanded tied candidate set. A constant full or lite score vector cannot validate ranking.",
+  "tie_rule_recorded_at_utc": "2026-11-15T19:09:07.754908+00:00",
+  "profile": "v4"
+}

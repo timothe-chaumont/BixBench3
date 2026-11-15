@@ -4,7 +4,9 @@
 
 The practical goal is an informative evaluation taking tens of minutes, rather than a strict ten-minute timeout. The current prospective panel compares a **30-minute downstream task** with a **3-hour raw-input reference**, both on 6 vCPU / 32 GiB with GPT-5.4 mini, xhigh reasoning. Six immutable harness variants are evaluated, with an independent repeat panel if credits and time permit. A budget limit is not evidence that the task completed within that time.
 
-The authoritative current design is [the V3 budget amendment](protocol-v3-budget-amendment.json). [V2](protocol.json) and [initial V3](protocol-v3.json) are retained as development history, rather than silently rewritten. [Methodology and research](methodology.md) explain the validation criteria and their limits.
+The authoritative current design is [the V4 protocol](protocol-v4.json). [V2](protocol.json) and [V3 development](protocol-v3.json) are retained as development history, rather than silently rewritten. [Methodology and research](methodology.md) explain the validation criteria and their limits.
+
+V3 development also exposed a converter bug: a blank source URL made ACTA2 occupy the description field of TGxDDI. The original workbook remained available, but the helper lost one member. V4 fixes the blank field and independently verifies all 89 sets against their source rows. V3 results remain separate.
 
 The lite task supplies the official count matrix and omits the counting artifact from both the requirements and grade. It retains all 85 libraries, all 30,146 assay probes, every time/dose stratum and all four downstream contracts. Original metadata remain available; prepared public references and a lossless conversion of the input workbook are shared by both fidelities. This measures downstream performance conditional on supplied counts. It does not measure counting, dependency installation or the full operational history of a raw-input run.
 

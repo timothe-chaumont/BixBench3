@@ -45,8 +45,8 @@ Reference resources under data/reference include Ensembl 100 orthologs and MSigD
 references. These are shared preparation choices for both full and lite runs;
 record the package patch versions and frozen-reference adaptation in METHODS.md.
 """
-    if profile == "v3":
-        common += """\nInput preparation v3: the data tree is mounted at /data (absolute path).\nThe installed R package name is lowercase `piano`: `library(piano)` and\n`packageVersion("piano")` work. The uppercase product name PIANO is not\na second R package to install. Check lowercase before attempting installation.\nThe original DNA-damage workbook is retained unchanged under /data/metadata.\n/data/reference/curated-dna-damage-all-sets.gmt contains the exact same 89\ngene-set names, source URLs and member genes, converted once to a text format.\nIt includes the set that the method guidance asks you to exclude; apply the\noriginal exclusion and background rules yourself. Its conversion provenance is\nin curated-dna-damage-all-sets.provenance.json. No statistical results are supplied.\nSample metadata columns: library_id, geo_accession, treatment_ppm (e.g. 0ppm),\ntimepoint (day7/day28/day90), organism, tissue, strain.\n\n"""
+    if profile in ("v3", "v4"):
+        common += """\nPrepared metadata: the data tree is mounted at /data (absolute path).\nThe installed R package name is lowercase `piano`: `library(piano)` and\n`packageVersion("piano")` work. The uppercase product name PIANO is not\na second R package to install. Check lowercase before attempting installation.\nThe original DNA-damage workbook is retained unchanged under /data/metadata.\n/data/reference/curated-dna-damage-all-sets.gmt contains the exact same 89\ngene-set names, source URLs and member genes, converted once to a text format.\nIt includes the set that the method guidance asks you to exclude; apply the\noriginal exclusion and background rules yourself. Its conversion provenance is\nin curated-dna-damage-all-sets.provenance.json. No statistical results are supplied.\nSample metadata columns: library_id, geo_accession, treatment_ppm (e.g. 0ppm),\ntimepoint (day7/day28/day90), organism, tissue, strain.\n\n"""
     if mode == "lite":
         case["expected_outputs"] = [
             a for a in case["expected_outputs"] if a["artifact_id"] != COUNT
@@ -162,7 +162,8 @@ class StudyRunner(gcp.GCPRunner):
             (HERE, "proxy-study-code"),
             (self.work / "harness.tar.gz", "harness.tar.gz"),
             (
-                self.inputs / ("upload-v3" if self.profile == "v3" else "upload"),
+                self.inputs
+                / ("upload-" + self.profile if self.profile in ("v3", "v4") else "upload"),
                 "proxy-study-inputs",
             ),
             (HERE.parent / "task11_lite/grade_lite.py", "grade_lite.py"),
@@ -269,7 +270,7 @@ def main():
         ap.add_argument("--" + name, required=True)
     ap.add_argument("--budget", type=int, required=True)
     ap.add_argument("--replicate", type=int, default=1)
-    ap.add_argument("--profile", choices=["v2", "v3"], default="v2")
+    ap.add_argument("--profile", choices=["v2", "v3", "v4"], default="v2")
     a = ap.parse_args()
     work = Path(a.work_dir).resolve()
     work.mkdir(parents=True, exist_ok=True)
