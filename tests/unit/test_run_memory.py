@@ -379,3 +379,24 @@ def test_parallel_subagents_share_one_memory_without_losing_cards(env) -> None:
     assert value["stats"]["cards_by_kind"] == {"observation": 6, "how_to": 6}
     assert len(value["cards"]) == 12 and len(value["stats"]["packs"]) == 6
     assert all(pack.startswith("## Shared run memory") for pack in packs)
+def test_recall_query_respects_pastdev_limit() -> None:
+    """past.dev rejects recall queries over 1,000 characters (HTTP 400 recall-query-too-long)."""
+    import io
+    import json as _json
+
+    sent = {}
+
+    class _Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def opener(request, timeout=None):
+        sent.update(_json.loads(request.data))
+        return _Response(b'{"results": []}')
+
+    client = memory.PastDevClient("past_sk_test", opener=opener)
+    client.recall("x" * 5000, identity="reader")
+    assert len(sent["query"]) == memory.RECALL_QUERY_MAX == 1000
