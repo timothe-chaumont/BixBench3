@@ -20,3 +20,4 @@ if ! docker image inspect bixbench3-sandbox:proxy-study-v2 >/dev/null 2>&1; then
 fi
 docker run --rm --network none bixbench3-sandbox:proxy-study-v2 python3 -c 'import sys,pandas,numpy;print(sys.executable,pandas.__version__,numpy.__version__)'
 docker run --rm --network none bixbench3-sandbox:proxy-study-v2 Rscript -e 'library(DESeq2);library(piano);library(biomaRt);sessionInfo()'
+docker run --rm --network none -v /opt/bixbench3/tools/proxy_study/runtime_smoke.R:/runtime_smoke.R:ro bixbench3-sandbox:proxy-study-v2 Rscript /runtime_smoke.R

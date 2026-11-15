@@ -1,0 +1,17 @@
+# Synthetic functional check only. No benchmark observations or answer artifacts.
+suppressPackageStartupMessages({library(DESeq2);library(piano);library(biomaRt)})
+stopifnot(as.character(packageVersion('DESeq2'))=='1.28.0',as.character(packageVersion('piano'))=='2.4.0')
+set.seed(17)
+mat<-matrix(rnbinom(600,mu=40,size=8),nrow=100,dimnames=list(paste0('synthetic_',1:100),paste0('s',1:6)))
+cd<-data.frame(group=factor(rep(c('control','treated'),each=3)),row.names=colnames(mat))
+dds<-DESeqDataSetFromMatrix(mat,cd,~group);dds<-DESeq(dds,fitType='mean',quiet=TRUE)
+z<-as.data.frame(results(dds,contrast=c('group','treated','control')))
+stopifnot(nrow(z)==100,all(c('log2FoldChange','stat','pvalue','padj') %in% names(z)))
+stat<-setNames(z$stat,rownames(z));stat<-stat[is.finite(stat)]
+sets<-data.frame(gene=names(stat),set=rep(paste0('synthetic_set_',1:5),length.out=length(stat)))
+gsc<-loadGSC(sets)
+gsa<-runGSA(geneLevelStats=stat,gsc=gsc,geneSetStat='mean',signifMethod='geneSampling',adjMethod='fdr',gsSizeLim=c(5,500),nPerm=50,verbose=FALSE)
+summary<-GSAsummaryTable(gsa);stopifnot(nrow(summary)==5)
+cat('FUNCTIONAL_SMOKE_OK: DESeq2 results and PIANO gene-set analysis\n')
+cat('PIANO summary columns:',paste(names(summary),collapse=', '),'\n')
+print(sapply(c('DESeq2','piano','biomaRt','S4Vectors','SummarizedExperiment'),function(p)as.character(packageVersion(p))))
