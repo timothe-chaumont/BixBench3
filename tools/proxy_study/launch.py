@@ -76,6 +76,7 @@ class StudyRunner(gcp.GCPRunner):
         return m
     def _install_live_tracking(self,p):
         base=('gcloud','--project',self.project)
+        self.executor.run(gcp.ssh_argv(base,self.vm,p.zone,('bash','-c','rm -rf ~/proxy-study-code ~/proxy-study-inputs')))
         for src,dst in [(HERE,'proxy-study-code'),(self.work/'harness.tar.gz','harness.tar.gz'),(self.inputs/'upload','proxy-study-inputs'),(HERE.parent/'task11_lite/grade_lite.py','grade_lite.py')]:
             recursive=('--recurse',) if src.is_dir() else ()
             self.executor.run((*base,'compute','scp',*recursive,str(src),f'{self.vm}:~/{dst}',f'--zone={p.zone}'))
