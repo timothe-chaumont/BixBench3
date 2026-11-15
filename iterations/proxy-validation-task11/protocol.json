@@ -38,7 +38,9 @@
       "full keeps raw-read counting requirement and QuasR guidance",
       "Python scientific runtime made available consistently",
       "only the runtime limit is overridden in the selected committed harness"
-    ]
+    ],
+    "process_judge": "Disabled equally for prospective runs: primary outcome is deterministic artifact score. Network adjudication remains unchanged. Historical judge results are not pooled.",
+    "message_limit": 5000
   },
   "stage_1": "One full run per arm, one 600s and one 1200s lite run per arm, plus baseline 300s/2400s budget probes.",
   "stage_2": "If remaining budget and 12h study deadline permit, repeat all six full arms and the shortest lite budget whose discovery scores are nonconstant. Confirmation is reported separately and not used to retune the proxy.",
@@ -79,5 +81,8 @@
     "do_not_enable_auto_reload_or_paid_GCP": true
   },
   "secondary": "Deterministic count-source sensitivity and binomial count-thinning depth curves, clearly separated from agent validation. No universal scaling law will be claimed from a small budget grid.",
-  "registered_at_utc": "2026-11-15T10:54:22.205082+00:00"
+  "registered_at_utc": "2026-11-15T10:54:22.205082+00:00",
+  "amendments": [
+    "Before any prospective runs: correct Python PATH shadowing discovered in pilot; use original message limit 5000; omit secondary process-judge calls equally to conserve API credits."
+  ]
 }
