@@ -2283,6 +2283,7 @@ patterns = (
     (re.compile(rb"sk-ant-[A-Za-z0-9_-]+"), b"<redacted:ANTHROPIC_API_KEY>"),
     (re.compile(rb"sk-or-[A-Za-z0-9_-]+"), b"<redacted:OPENROUTER_API_KEY>"),
     (re.compile(rb"AIza[A-Za-z0-9_-]+"), b"<redacted:GOOGLE_API_KEY>"),
+    (re.compile(rb"past_[sm]k_[A-Za-z0-9_-]+"), b"<redacted:PAST_API_KEY>"),
 )
 for relative in ("inspect_logs", "outputs", "agent_artifacts", "artifact_grades", "grade.json", "judge.json", "broker_logs"):
     base_path = root / relative

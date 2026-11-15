@@ -63,6 +63,9 @@ RELAY=$!
 for _ in $(seq 20); do python3 -c 'import socket,sys;socket.create_connection(("127.0.0.1",int(sys.argv[1])),1)' "$RELAY_PORT" 2>/dev/null && break; sleep 0.5; done
 kill -0 "$RELAY" 2>/dev/null || { echo "key relay did not start"; cat "$JOB/key_relay.log"; exit 2; }
 (umask 077 && printf 'OPENAI_API_KEY=%s\nOPENAI_BASE_URL=http://127.0.0.1:%s/v1\n' "$RELAY_TOKEN" "$RELAY_PORT" > "$SECRETS/bixbench3.env")
+# past.dev run-memory conditions: the host-side harness reads PAST_API_KEY (never passed to the sandbox,
+# whose commands run under env -i / --cleanenv); redacted from uploaded results by gcp_runner.
+(umask 077 && sed -n 's/^export //; /^PAST_API_KEY=./p' "$HOME/.bixbench3_secrets" >> "$SECRETS/bixbench3.env")
 echo "[sherlock] $(tail -1 "$JOB/key_relay.log" | cut -d' ' -f4-)"
 
 # --- source tree = runtime checkout (HEAD) + optional committed harness overlay (as on GCP)
