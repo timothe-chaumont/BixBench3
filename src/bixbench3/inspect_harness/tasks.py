@@ -5,6 +5,7 @@ from pathlib import Path
 
 from inspect_ai import Task, task
 
+from bixbench3.inspect_harness.critic import critic_setup
 from bixbench3.inspect_harness.dataset import (
     DEFAULT_TIME_LIMIT_SECONDS,
     load_cases_dataset,
@@ -36,7 +37,7 @@ def bixbench3_cases(
             case_ids,
             time_limit_seconds=TIME_LIMIT_SECONDS,
         ),
-        setup=prepare_case_workspace(),
+        setup=[prepare_case_workspace(), critic_setup()],
         solver=bixbench3_agent(),
         scorer=output_collection(),
         sandbox=("docker", compose_path),
