@@ -49,6 +49,7 @@ PACK_CHARS = 8000  # ~2,000 tokens of ranked memory added to a sub-agent brief
 CONVENTIONS_CHARS = 4000  # conventions are always included, up to this size
 RECALL_MAX_TOKENS = 4000
 RECALL_LIMIT = 60
+RECALL_QUERY_MAX = 1000  # past.dev API limit (400 recall-query-too-long above it)
 RECALL_TOOL_CHARS = 4000
 OBS_MAX = 1500  # characters of command output kept in an observation card
 CARD_TEXT_MAX = 2000
@@ -187,7 +188,7 @@ class PastDevClient:
     def recall(self, query: str, *, identity: str, max_tokens: int = RECALL_MAX_TOKENS,
                limit: int = RECALL_LIMIT) -> list[dict[str, Any]]:
         response = self._request("POST", "/recall", {
-            "query": query[:8000], "identity": identity, "limit": limit, "maxTokens": max_tokens,
+            "query": query[:RECALL_QUERY_MAX], "identity": identity, "limit": limit, "maxTokens": max_tokens,
             "sort": "relevance",
         })
         results = response.get("results", [])

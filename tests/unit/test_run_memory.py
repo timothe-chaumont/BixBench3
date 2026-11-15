@@ -360,3 +360,26 @@ def test_wiring_redaction_and_sherlock_secret() -> None:
     assert "build_pack(brief, name)" in subagent and "absorb_subagent(report, brief, name)" in subagent
     assert 'past_[sm]k_[A-Za-z0-9_-]+' in (REPO / "src/bixbench3/gcp_runner.py").read_text()
     assert "/^PAST_API_KEY=/p" in (REPO / "sherlock/run_job.sbatch").read_text()
+
+
+def test_recall_query_respects_pastdev_limit() -> None:
+    """past.dev rejects recall queries over 1,000 characters (HTTP 400 recall-query-too-long)."""
+    import io
+    import json as _json
+
+    sent = {}
+
+    class _Response(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def opener(request, timeout=None):
+        sent.update(_json.loads(request.data))
+        return _Response(b'{"results": []}')
+
+    client = memory.PastDevClient("past_sk_test", opener=opener)
+    client.recall("x" * 5000, identity="reader")
+    assert len(sent["query"]) == memory.RECALL_QUERY_MAX == 1000
