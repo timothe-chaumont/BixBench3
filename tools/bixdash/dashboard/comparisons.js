@@ -7,15 +7,16 @@
     return number(latest.tokens_total);
   }
   function rowOf(run) {
-    const m = run.meta || {}, l = run.latest || {};
+    const m = run.meta || {}, l = run.latest || {}, b = run.comparison_budget || l;
     const rawScore = number(l.partial_score);
     return {id: run.run_id, name: m.description || m.condition || run.run_id,
       task: String(m.task_id ?? 'Unknown'), owner: m.owner || 'Unspecified',
       model: m.model || 'Unknown', condition: m.condition || '',
       score: rawScore !== null && rawScore <= 1 ? rawScore : null,
-      final: l.score_is_final === true, cost: number(l.cost_usd),
-      time: number(l.elapsed_s) === null ? null : l.elapsed_s / 60,
-      calls: number(l.n_model_calls), tokens: totalTokens(l), status: l.status || l.phase || 'Unknown'};
+      final: l.score_is_final === true, cost: number(b.cost_usd),
+      budgetLowerBound: b.is_lower_bound === true, budgetObservedAt: b.ts,
+      time: number(b.elapsed_s) === null ? null : b.elapsed_s / 60,
+      calls: number(b.n_model_calls), tokens: totalTokens(b), status: l.status || l.phase || 'Unknown'};
   }
   function plottable(rows, metric, includePartial) {
     return rows.filter(r => r.score !== null && (r.final || includePartial) && r[metric] !== null);
@@ -51,7 +52,7 @@
     const finals = selected.filter(r => r.score !== null && r.final).length;
     const inter = selected.filter(r => r.score !== null && !r.final).length;
     $('coverage').textContent = `${selected.length} runs selected · ${finals} final scores · ${inter} intermediate scores · ${selected.filter(r => r.score === null).length} awaiting a score.`;
-    $('run-table').innerHTML = selected.length ? selected.map(r => `<tr><td><span class="dot" style="background:${colors[r.id]}"></span> ${esc(r.name)}<div class="note">${esc(r.model)} · ${esc(r.condition)}</div></td><td>${esc(r.task)} / ${esc(r.owner)}</td><td>${score(r.score)}${r.score === null ? '' : `<br><span class="tag">${r.final ? 'Final' : 'Intermediate'}</span>`}</td><td class="num">${r.cost === null ? '—' : '$' + r.cost.toFixed(2)}</td><td class="num">${fmt(r.time)} min</td><td class="num">${fmt(r.calls)}</td><td class="num">${fmt(r.tokens)}</td><td>${esc(r.status)}</td></tr>`).join('') : '<tr><td colspan="8">No runs match these filters.</td></tr>';
+    $('run-table').innerHTML = selected.length ? selected.map(r => `<tr><td><span class="dot" style="background:${colors[r.id]}"></span> ${esc(r.name)}<div class="note">${esc(r.model)} · ${esc(r.condition)}</div></td><td>${esc(r.task)} / ${esc(r.owner)}</td><td>${score(r.score)}${r.score === null ? '' : `<br><span class="tag">${r.final ? 'Final' : 'Intermediate'}</span>`}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${r.cost === null ? '—' : '$' + r.cost.toFixed(2)}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.time)} min</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.calls)}</td><td class="num">${r.budgetLowerBound ? '≥ ' : ''}${fmt(r.tokens)}</td><td>${esc(r.status)}${r.budgetLowerBound ? '<div class="note">Budget: last recorded minimum</div>' : ''}</td></tr>`).join('') : '<tr><td colspan="8">No runs match these filters.</td></tr>';
   }
   function chart(id, points, metric, label) {
     const el = $(id);
@@ -71,8 +72,9 @@
     points.forEach((r,i) => {
       const title = `${r.name} | ${r.final ? 'Final' : 'Intermediate'} score: ${score(r.score)} | ${label}: ${metric === 'tokens' ? fmt(r.tokens) : fmt(r[metric])}`;
       svg += `<circle class="point" data-point="${i}" tabindex="0" role="img" aria-label="${esc(title)}" cx="${X(r[metric])}" cy="${Y(r.score)}" r="3.5" fill="${r.final ? colors[r.id] : 'var(--surface)'}" stroke="${colors[r.id]}" stroke-width="1.5" ${r.final ? '' : 'stroke-dasharray="3 2"'}></circle>`;
+      if (r.budgetLowerBound) svg += `<text x="${X(r[metric])+7}" y="${Y(r.score)-6}" fill="var(--muted)" font-size="11" aria-hidden="true">‡</text>`;
     });
-    el.innerHTML = `<p class="note">${points.length} scored run${points.length === 1 ? "" : "s"} plotted</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scientific score versus ${esc(label)}">${svg}</svg>`;
+    el.innerHTML = `<p class="note">${points.length} scored run${points.length === 1 ? "" : "s"} plotted${points.some(r => r.budgetLowerBound) ? ` · ${points.filter(r => r.budgetLowerBound).length} budgets are recorded minimums (‡)` : ''}</p><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Scientific score versus ${esc(label)}">${svg}</svg>`;
     el.querySelectorAll('.point').forEach(point => {
       const r = points[Number(point.dataset.point)];
       const position = event => {
@@ -89,7 +91,7 @@
         const value = metric === 'cost' ? '$' + r.cost.toFixed(2) + ' API cost'
           : metric === 'time' ? fmt(r.time) + ' min elapsed'
           : metric === 'tokens' ? fmt(r.tokens) + ' total tokens' : fmt(r.calls) + ' model calls';
-        tooltip.innerHTML = `<strong>${esc(r.name)}</strong><div>${r.final ? 'Final' : 'Intermediate'} score: ${score(r.score)}</div><div>${esc(value)}</div>`;
+        tooltip.innerHTML = `<strong>${esc(r.name)}</strong><div>${r.final ? 'Final' : 'Intermediate'} score: ${score(r.score)}</div><div>${r.budgetLowerBound ? '≥ ' : ''}${esc(value)}</div>${r.budgetLowerBound ? '<div class="note">‡ Last live snapshot; final budget unavailable</div>' : ''}`;
         tooltip.hidden = false;
         point.setAttribute('aria-describedby', 'point-tooltip');
         position(event);

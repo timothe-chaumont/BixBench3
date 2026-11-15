@@ -72,11 +72,42 @@ class Source:
             return sorted(p.parent.name for p in self.root.glob("*/meta.json"))
         return self._get("ids", load)
 
+    def comparison_budget(self, latest: dict, run_id: str) -> dict | None:
+        """Expose missing terminal budgets as explicitly labelled observed lower bounds.
+
+        Keep raw latest intact: an old live snapshot is not a final usage total.
+        """
+        if not latest.get("score_is_final"):
+            return None
+        if all(latest.get(k) is not None for k in ("cost_usd", "n_model_calls")) and (
+            latest.get("tokens") is not None or latest.get("tokens_total") is not None
+        ):
+            return None
+        exact_text = self._read(f"{run_id}/final_usage.json")
+        if exact_text:
+            exact = json.loads(exact_text)
+            fields = ("cost_usd", "n_model_calls", "tokens_total", "elapsed_s")
+            if exact.get("source") == "final_inspect_eval" and all(
+                isinstance(exact.get(k), (int, float)) and exact[k] >= 0 for k in fields
+            ):
+                return {k: exact.get(k) for k in (*fields, "ts")} | {
+                    "source": "final_inspect_eval", "is_lower_bound": False}
+        candidates = [h for h in self.history(run_id)
+                      if all(h.get(k) is not None for k in
+                             ("cost_usd", "n_model_calls", "tokens_total", "elapsed_s"))]
+        if not candidates:
+            return None
+        observed = max(candidates, key=lambda h: h["elapsed_s"])
+        return {k: observed.get(k) for k in
+                ("cost_usd", "n_model_calls", "tokens_total", "elapsed_s", "ts")} | {
+                    "is_lower_bound": True, "source": "last_live_snapshot"}
+
     def run(self, run_id: str) -> dict:
         def load():
             meta = json.loads(self._read(f"{run_id}/meta.json") or "{}")
             latest = json.loads(self._read(f"{run_id}/latest.json") or "{}")
-            return {"run_id": run_id, "meta": meta, "latest": latest}
+            return {"run_id": run_id, "meta": meta, "latest": latest,
+                    "comparison_budget": self.comparison_budget(latest, run_id)}
         return self._get(f"run:{run_id}", load)
 
     def history(self, run_id: str) -> list[dict]:
