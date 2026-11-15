@@ -126,6 +126,9 @@ class StudyRunner(gcp.GCPRunner):
 
     def _initial_manifest(self, *args, **kwargs):
         m = super()._initial_manifest(*args, **kwargs)
+        bundle = self.inputs / (
+            "upload-" + self.profile if self.profile in ("v3", "v4") else "upload"
+        )
         m["study_profile"] = {
             "version": "task11-prospective-" + self.profile,
             "job_id": self.job_id,
@@ -138,6 +141,14 @@ class StudyRunner(gcp.GCPRunner):
             "common_downstream_artifacts": 4,
             "scored_artifacts": 4 if self.mode == "lite" else 5,
             "count_matrix_supplied": self.mode == "lite",
+            "supplied_counts_sha256": digest(bundle / "provided_counts.csv")
+            if self.mode == "lite"
+            else None,
+            "prepared_reference_files_sha256": {
+                str(path.relative_to(bundle)): digest(path)
+                for path in sorted((bundle / "reference-data").glob("*"))
+                if path.is_file()
+            },
             "process_judge": "not_run_primary_artifact_study",
             "reference_provenance": json.loads(
                 (self.inputs / "reference-data/provenance.json").read_text()
