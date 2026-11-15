@@ -5,13 +5,9 @@ import itertools
 import json
 from pathlib import Path
 
-import matplotlib
 import numpy as np
 import pandas as pd
 from scipy.stats import kendalltau, spearmanr
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 
 def compare(full, lite):
@@ -47,6 +43,11 @@ def compare(full, lite):
 
 
 def main():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
     ap = argparse.ArgumentParser()
     ap.add_argument("jobs", type=Path)
     ap.add_argument("out", type=Path)
