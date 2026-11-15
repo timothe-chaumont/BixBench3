@@ -9,7 +9,7 @@ dependencies:
   - subread=2.0.1       # prompt: featureCounts v2.0.1
   - samtools
   - cutadapt            # prompt: -a AAAAAAAA -a AGATCGG -q 15 -m 25 (no version pinned)
-  - fastqc              # no version pinned
+  - fastqc=0.12.1        # 0.13.0 on conda-forge/bioconda is a different CLI (no -o)
   - perl                # tag-based_RNAseq scripts
   - pigz
   - git

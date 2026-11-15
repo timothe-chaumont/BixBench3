@@ -6,7 +6,7 @@
 #   tagseq     tag-based_RNAseq scripts present and compile (perl -c)
 #   fastqc     FastQC runs
 #   cutadapt   prompt options -a AAAAAAAA -a AGATCGG -q 15 -m 25
-#   hisat2     index build + alignment with --rna-strandedness F, samtools sort/index
+#   hisat2     index build + alignment with --rna-strandness F, samtools sort/index
 #   counts     featureCounts -s 1 gives the simulated sense counts, -s 2 gives ~0
 #   R          DESeq2, rtracklayer GTF import, clusterProfiler enrichGO (BP, BH) with org.Hs.eg.db offline
 # Writes MANIFEST.json (installed versions + embedded GO source dates) when --manifest is given.
@@ -68,7 +68,7 @@ if T cutadapt -a AAAAAAAA -a AGATCGG -q 15 -m 25 --quality-base 33 -o "$W/trimme
 else fail cutadapt "cutadapt failed or poly-A not trimmed"; fi
 
 if T hisat2-build -q "$W/genome.fa" "$W/idx" >/dev/null 2>&1 \
-   && T hisat2 -q -x "$W/idx" -U "$W/trimmed.fastq" --rna-strandedness F -S "$W/aln.sam" 2>"$W/hisat2.log" \
+   && T hisat2 -q -x "$W/idx" -U "$W/trimmed.fastq" --rna-strandness F -S "$W/aln.sam" 2>"$W/hisat2.log" \
    && T samtools sort -o "$W/aln.bam" "$W/aln.sam" 2>/dev/null && T samtools index "$W/aln.bam"; then
   pass hisat2 "$(tail -1 "$W/hisat2.log")"
 else fail hisat2 "index/alignment failed"; fi
