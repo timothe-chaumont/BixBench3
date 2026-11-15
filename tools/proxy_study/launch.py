@@ -60,7 +60,7 @@ class StudyRunner(gcp.GCPRunner):
         p=super().build_run_plan(**kwargs);old=p.layout.vm_name
         commands={k:tuple(a.replace(old,self.vm) for a in v) for k,v in p.commands.items()}
         argv=tuple('/opt/bixbench3/tools/proxy_study/inspect_task.py@proxy_study' if a.endswith('/inspect_harness/tasks.py@bixbench3_cases') else a for a in p.inspect_argv)
-        argv+=('-T',f'budget_seconds={self.budget}')
+        argv+=('-T',f'budget_seconds={self.budget}','--model-cost-config','/opt/bixbench3/tools/proxy_study/model-costs.json')
         p=dataclasses.replace(p,layout=dataclasses.replace(p.layout,vm_name=self.vm),commands=commands,inspect_argv=argv)
         self.plan=p
         return p
