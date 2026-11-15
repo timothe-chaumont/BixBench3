@@ -6,7 +6,7 @@
 #   bash tools/grant_dashboard_access.sh <MEMBER_PROJECT_ID> [member@email ...]
 #
 # What it grants, on gs://$DASH_BUCKET only, restricted by an IAM condition to
-# objects under _dashboard/ :
+# objects (and listings) under _dashboard/ :
 #   - roles/storage.objectUser to <project-number>-compute@developer.gserviceaccount.com
 #     (the default compute service account the BixBench3 runner attaches to run VMs)
 #   - the same role to each email given (to run import_finished_run.py from a laptop)
@@ -38,13 +38,23 @@ if [ -z "$NUMBER" ]; then
   [ -n "$NUMBER" ] || exit 1
 fi
 
-CONDITION="expression=resource.name.startsWith(\"projects/_/buckets/${DASH_BUCKET}/objects/${PREFIX}\"),title=bixdash-${MEMBER_PROJECT},description=bixdash snapshots only"
+# Objects under _dashboard/, plus listings whose prefix is under _dashboard/
+# (`gcloud storage cp` to a folder lists first; a bucket listing is not an object,
+# so the object-name clause alone never allows it). Written to a file because the
+# expression contains commas, which --condition cannot carry.
+COND_FILE=$(mktemp)
+trap 'rm -f "$COND_FILE"' EXIT
+cat >"$COND_FILE" <<EOF
+title: bixdash-${MEMBER_PROJECT}-v2
+description: bixdash snapshots only (objects and listings under ${PREFIX})
+expression: resource.name.startsWith("projects/_/buckets/${DASH_BUCKET}/objects/${PREFIX}") || api.getAttribute("storage.googleapis.com/objectListPrefix", "").startsWith("${PREFIX}")
+EOF
 MEMBERS=("serviceAccount:${NUMBER}-compute@developer.gserviceaccount.com")
 for email in "$@"; do MEMBERS+=("user:${email}"); done
 
 for member in "${MEMBERS[@]}"; do
   echo "granting objectUser on gs://${DASH_BUCKET}/${PREFIX}* to ${member}"
   gcloud storage buckets add-iam-policy-binding "gs://${DASH_BUCKET}" \
-    --member="$member" --role=roles/storage.objectUser --condition="$CONDITION" >/dev/null
+    --member="$member" --role=roles/storage.objectUser --condition-from-file="$COND_FILE" >/dev/null
 done
 echo "Done. Member runs: add --dashboard-uri gs://${DASH_BUCKET}/_dashboard to the launch command."

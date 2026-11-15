@@ -30,6 +30,9 @@ import sqlite3
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -503,17 +506,53 @@ def estimate_eta(elapsed: float, present: int, total: int, progress: dict, histo
 
 
 # -------------------------------------------------------------------- upload
-def gs_put_many(paths: list[Path], dest_prefix: str) -> dict:
-    """Upload files in ONE gcloud call; return a status record (kept locally and printed)."""
+def _access_token() -> str:
+    """OAuth token of the VM's service account (metadata server), else of the local gcloud login."""
     try:
-        proc = subprocess.run(
-            ["gcloud", "storage", "cp", "--quiet", *[str(p) for p in paths], dest_prefix],
-            capture_output=True, text=True, timeout=180,
-        )
-        ok = proc.returncode == 0
-        err = None if ok else redact(proc.stderr.strip().splitlines()[-1] if proc.stderr.strip() else "upload failed")
-    except (OSError, subprocess.SubprocessError) as error:
-        ok, err = False, str(error)[:300]
+        req = urllib.request.Request(
+            "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token",
+            headers={"Metadata-Flavor": "Google"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return json.loads(resp.read())["access_token"]
+    except (OSError, ValueError, KeyError):
+        proc = subprocess.run(["gcloud", "auth", "print-access-token"],
+                              capture_output=True, text=True, timeout=60, check=True)
+        return proc.stdout.strip()
+
+
+def gs_put_many(paths: list[Path], dest_prefix: str) -> dict:
+    """Upload each file to its exact object name (JSON API, objects.insert only).
+
+    No listing is needed, so a write grant restricted by IAM condition to the
+    _dashboard/ prefix of another project's bucket is enough (`gcloud storage cp`
+    to a folder first lists the bucket, which such a grant cannot allow)."""
+    err = None
+    m = re.fullmatch(r"gs://([^/]+)/?(.*)", dest_prefix)
+    try:
+        if not m:
+            raise ValueError(f"not a gs:// URI: {dest_prefix}")
+        bucket, prefix = m.group(1), m.group(2)
+        if prefix and not prefix.endswith("/"):
+            prefix += "/"
+        token = _access_token()
+        for path in paths:
+            name = urllib.parse.quote(prefix + path.name, safe="")
+            req = urllib.request.Request(
+                f"https://storage.googleapis.com/upload/storage/v1/b/{bucket}/o?uploadType=media&name={name}",
+                data=path.read_bytes(), method="POST",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=60):
+                pass
+    except urllib.error.HTTPError as error:
+        detail = error.read().decode(errors="replace")
+        try:
+            detail = json.loads(detail)["error"]["message"]
+        except (ValueError, KeyError, TypeError):
+            pass
+        err = redact(f"HTTP {error.code}: {detail}")[:300]
+    except (OSError, ValueError, subprocess.SubprocessError) as error:
+        err = redact(str(error))[:300]
+    ok = err is None
     return {"ts": now_iso(), "dest": dest_prefix, "ok": ok, "error": err}
 
 
