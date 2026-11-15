@@ -162,6 +162,18 @@ def test_wrapped_tool_is_transparent_and_captures(env) -> None:
     assert env.client.ingested[0]["audience"] == _state(env)["audience"]
 
 
+def test_wrapped_tool_receives_arguments_as_inspect_passes_them(env) -> None:
+    """Regression: Inspect maps model arguments with tool_params(); the wrapper must accept them."""
+    from inspect_ai.model._call_tools import tool_params
+
+    wrapped = memory.with_capture(_fake_bash(), "orchestrator")
+    model_arguments = {"input": "head -2 /data/metadata/sample_sheet.tsv"}
+    params = tool_params(model_arguments, wrapped)
+    assert params == model_arguments
+    result = asyncio.run(wrapped(**params))
+    assert "run\tsample\tcell_line" in result
+
+
 def test_same_inspection_updates_one_card_and_counts_every_reader(env) -> None:
     async def scenario() -> None:
         for author in ("planner", "artifact-a", "artifact-b"):
