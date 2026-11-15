@@ -6,11 +6,13 @@
     if (t && ['input', 'cached', 'output'].every(k => number(t[k]) !== null)) return t.input + t.cached + t.output;
     return number(latest.tokens_total);
   }
-  function rowOf(run) {
+  function rowOf(run, taskByPaper = {}) {
     const m = run.meta || {}, l = run.latest || {}, b = run.comparison_budget || l;
     const rawScore = number(l.partial_score);
     return {id: run.run_id, name: m.description || m.condition || run.run_id,
-      task: String(m.task_id ?? 'Unknown'), owner: m.owner || 'Unspecified',
+      task: String(m.task_id ?? taskByPaper[m.paper_id || String(run.run_id).split('__')[0]] ?? 'Unknown'),
+      baseline: /(^|[^a-z])baseline([^a-z]|$)/i.test((m.condition || '') + ' ' + (m.description || '')),
+      isSmoke: /smoke/i.test((m.condition || '') + ' ' + (m.description || '')), owner: m.owner || 'Unspecified',
       model: m.model || 'Unknown', condition: m.condition || '',
       score: rawScore !== null && rawScore <= 1 ? rawScore : null,
       final: l.score_is_final === true, cost: number(b.cost_usd),
@@ -19,7 +21,7 @@
       calls: number(b.n_model_calls), tokens: totalTokens(b), status: l.status || l.phase || 'Unknown'};
   }
   function plottable(rows, metric, includePartial) {
-    return rows.filter(r => r.score !== null && (r.final || includePartial) && r[metric] !== null);
+    return rows.filter(r => !r.isSmoke && r.score !== null && (r.final || includePartial) && r[metric] !== null);
   }
   const helpers = {totalTokens, rowOf, plottable};
   if (typeof module !== 'undefined') module.exports = helpers;
@@ -29,7 +31,7 @@
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = v => v === null ? '—' : v.toLocaleString('en-US', {maximumFractionDigits: 2});
   const score = v => v === null ? 'Pending' : (v * 100).toFixed(1) + '%';
-  const palette = ['#287bb8','#d56a34','#22966a','#a36ac4','#bd4e76','#8b7b30'];
+  const baselineColor = '#4299d4', variantColor = '#e08b45';
   let rows = [], colors = {}, loading = false, initialized = false;
   const hiddenRuns = new Set();
   function options(id, values, allLabel) {
@@ -112,8 +114,10 @@
     try {
       const response = await fetch('/api/runs', {cache:'no-store'});
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json(); rows = data.map(rowOf).sort((a,b) => a.id.localeCompare(b.id));
-      rows.forEach((r,i) => colors[r.id] = palette[i % palette.length]);
+      const data = await response.json();
+      const taskByPaper = Object.fromEntries(data.filter(r => /^\d+$/.test(String(r.meta?.task_id ?? ''))).map(r => [r.meta.paper_id || String(r.run_id).split('__')[0], r.meta.task_id]));
+      rows = data.map(r => rowOf(r, taskByPaper)).sort((a,b) => a.id.localeCompare(b.id));
+      rows.forEach(r => colors[r.id] = r.baseline ? baselineColor : variantColor);
       options('task', [...new Set(rows.map(r => r.task))].sort((a,b) => Number(a)-Number(b)), 'All tasks');
       options('owner', [...new Set(rows.map(r => r.owner))].sort(), 'All owners');
       if (!initialized && rows.some(r => r.task === '11')) $('task').value = '11';

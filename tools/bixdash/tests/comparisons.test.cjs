@@ -23,3 +23,10 @@ assert.equal(plottable([missing],'cost',true).length,0);
 assert.equal(rowOf({latest:{partial_score:NaN}}).score,null);
 assert.equal(rowOf({latest:{partial_score:1.2}}).score,null);
 console.log('Comparison data tests passed (missing scores, real zero, partial/final, token accounting).');
+
+// Missing numeric task IDs can be inferred from another run of the same paper.
+const inferred = rowOf({run_id:'paper__model__run',meta:{paper_id:'paper',description:'Baseline: original harness'},latest:{}}, {paper:'11'});
+assert.equal(inferred.task, '11');
+assert.equal(inferred.baseline, true);
+assert.equal(rowOf({meta:{description:'v2b artifact-validator'},latest:{}}).baseline, false);
+assert.equal(plottable([{score:0,final:true,cost:1,isSmoke:true}], 'cost', false).length, 0);

@@ -23,7 +23,8 @@
 <button id="refresh" type="button">Refresh</button>
 </div>
 <p class="note">Cost = estimated analyst API cost, excluding GCP and judges. Tokens = uncached input + cached input + output; reasoning tokens are already included in output. Model calls are API generations, not tool calls.</p>
-<p class="note">Unscored runs are listed below, never plotted as zero. Live grading is disabled for the current baselines, so their score points will appear after final grading. Different tasks are not directly comparable.</p>
+<p class="note">Unscored runs are listed below, never plotted as zero. Live grading is disabled for the current baselines, so their score points will appear after final grading. Smoke tests are excluded from plots. Different tasks are not directly comparable.</p>
+<p class="note"><span class="dot" style="background:#4299d4"></span> Baselines &nbsp; <span class="dot" style="background:#e08b45"></span> Other runs</p>
 <div class="grid">
 <section class="panel"><h2>Score vs API cost</h2><div id="cost-chart" class="chart"></div></section>
 <section class="panel"><h2>Score vs elapsed time</h2><div id="time-chart" class="chart"></div></section>
