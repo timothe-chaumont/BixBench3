@@ -92,16 +92,17 @@ In the swarm, an orchestrator hands each table to its own specialist sub-agent.
 | Cost and time per run | $2.08 → $10.14 (about 5×) · 1.8 h → 5.7 h (about 3×) |
 
 **A finding about the benchmark itself.** The official process judge reads only the top-level conversation. It gave every
-swarm run **0 failure tags**, while the sub-agents made **810–1,757 actions it never saw**. Re-judged on the full trace,
-every swarm run is flagged. Multi-agent systems need full-trace grading.
+v4 swarm run **0 failure tags**, while the sub-agents made **810–1,757 actions it never saw**. Re-judged on the full
+trace, every v4 swarm run is flagged, and 15 of all 16 swarm runs get at least one tag. Multi-agent systems need full-trace grading.
 
 ## The full picture: the reviewer wins on score, cost and time
 
 <p align="center"><img src="results/task9/figures/story_3_cost_time.png" width="900" alt="Score vs cost and vs time"></p>
 
-The reviewer sits top-left: the best score at the lowest cost and time. The swarm is the tight cluster on the right.
+The reviewer sits top-left: the best score at the lowest cost and time. The v4 swarm is the tight cluster on the right. Swarm
+v5 + past.dev (pink) keeps about the same score at a third of the cost.
 
-## Going forward: make swarms as cheap as they are stable
+## Making swarms cheaper: v5 and past.dev memory (final results)
 
 The swarm's stability is a strong prior. A trace audit of a finished swarm run ($8.88, 17 sub-agents) shows where its
 cost goes:
@@ -114,9 +115,26 @@ cost goes:
 - **Agent orchestration:** conventions must travel between agents. 2 tables were rebuilt because a shared convention
   never reached their briefs.
 
-We are testing these fixes now. **Swarm v5** uses blocking waits, parallel dependency levels and sub-agents at medium
-effort. Its first finished runs cost about **$3–4 instead of $10**, with the same score. This is preliminary: 4 of 10 runs
-are done. Reviewer and swarm variants with past.dev memory are still running.
+We tested these fixes with 5 runs each. **Swarm v5** uses blocking waits, parallel dependency levels and sub-agents at
+medium effort.
+
+| Variant (5 runs each) | Mean score | Range | Cost / run | Time / run |
+|---|---|---|---|---|
+| Swarm v4 | 0.664 | 0.653–0.677 | $10.14 | 5.7 h |
+| Swarm v5 | 0.640 | 0.460–0.699 | $3.60 | 3.4 h |
+| **Swarm v5 + past.dev** | **0.681** | **0.649–0.723** | **$3.21** | 3.5 h |
+| Reviewer + past.dev | 0.663 | 0.333–0.930 | $2.13 | 2.3 h |
+| Dual reviewer + past.dev | 0.481 | 0.332–0.677 | $2.00 | 1.9 h |
+
+- **Cost:** the fixes cut the swarm's cost by about **3×**, at the same score.
+- **Stability:** v5 on its own loses the swarm's stability. Adding the shared **past.dev memory brings it back**, which
+  makes v5 + past.dev the best swarm.
+- **Reviewer with memory:** memory **does not help the reviewer**. A single agent already holds its own context, and
+  the dual reviewer scored clearly worse (p = 0.02 against the plain reviewer).
+- **Best variant:** the plain reviewer stays the best (0.830 at $2.24).
+
+A v4 swarm with past.dev got only 1 run before the API budget ran out. The project ended on 2026-11-16, so these are the
+final numbers.
 
 One more lesson from the logs: most of the remaining error on T98G comes from one ambiguous sentence in the task
 (*"Run DESeq2 separately by cell line and clone contrast"*). It leads agents to fit a different statistical design from
@@ -177,11 +195,11 @@ the paper's.
 | [`exp/t9-env`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env) | + agent-tailored environment | 5/5 done |
 | [`exp/t9-env-reviewer`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer) | + reviewer agent (**best**) | 5/5 done |
 | [`exp/t9-env-subagents`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents) | + swarm: orchestrator and sub-agents (v4) | 5/5 done |
-| [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | Swarm v5: the cost fixes | 1/5 done, running |
-| [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | Swarm v5 + past.dev shared memory | 3/5 done, running |
-| [`exp/t9-env-subagents-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-pastdev) | Swarm v4 + past.dev shared memory | running |
-| [`exp/t9-env-reviewer-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-pastdev) | Reviewer that remembers the tables it already accepted | running |
-| [`exp/t9-env-reviewer-dual-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-dual-pastdev) | Local reviewer + consistency reviewer with memory | running |
+| [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | Swarm v5: the cost fixes | 5/5 done |
+| [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | Swarm v5 + past.dev shared memory (best swarm) | 5/5 done |
+| [`exp/t9-env-subagents-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-pastdev) | Swarm v4 + past.dev shared memory | 1/5 done (budget ran out) |
+| [`exp/t9-env-reviewer-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-pastdev) | Reviewer that remembers the tables it already accepted | 5/5 done |
+| [`exp/t9-env-reviewer-dual-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-dual-pastdev) | Local reviewer + consistency reviewer with memory | 5/5 done |
 | [`exp/t11-baseline`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t11-baseline) | Task 11 baseline on Sherlock | 4/4 done |
 | [`exp/v2f`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v2f), [`exp/v3a`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v3a)–[`v3e`](https://github.com/timothe-chaumont/BixBench3/tree/exp/v3e) | Task 11 batch 1 harness variants on GCP | single runs, see [results/task11](results/task11/) |
 | [`exp/t11-v4-dag-orchestrator`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t11-v4-dag-orchestrator) | First sub-agent orchestrator (source of t9 v4) | code only |

@@ -17,12 +17,17 @@ grader. The task score is the paper's: the share of the 14 artifacts with a grad
 | + Preinstalled env | [`exp/t9-env`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env) | 0.57 ± 0.45 | 0.69 | 0.93 / 0.07 | $2.08 | 1.8 h | 0.6 |
 | **+ Env + Artifact reviewer** | [`exp/t9-env-reviewer`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer) | **0.76 ± 0.29** | **0.83** | **0.93 / 0.50** | $2.24 | 1.8 h | 0.4 |
 | + Env + Sub-agents (v4) | [`exp/t9-env-subagents`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents) | 0.46 ± 0.05 | 0.66 | 0.50 / 0.43 | $10.14 | 5.7 h | 1.0 † |
-| *+ Env + Sub-agents v5 (preliminary, 1 of 5 runs)* | [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | *0.50* | *0.68* | *–* | *$3.65* | *2.7 h* | *2.0 †* |
-| *+ Env + Sub-agents v5 + past.dev (preliminary, 3 of 5 runs)* | [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | *0.48 ± 0.27* | *0.67* | *0.57 / 0.36* | *$3.08* | *2.9 h* | *1.5 † (2 runs re-judged)* |
+| + Env + Sub-agents v5 | [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | 0.41 ± 0.24 | 0.64 | 0.50 / 0.07 | $3.60 | 3.4 h | 1.8 † |
+| + Env + Sub-agents v5 + past.dev | [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | 0.50 ± 0.11 | 0.68 | 0.57 / 0.36 | $3.21 | 3.5 h | 1.2 † |
+| + Env + Reviewer + past.dev | [`exp/t9-env-reviewer-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-pastdev) | 0.50 ± 0.38 | 0.66 | 0.93 / 0.07 | $2.13 | 2.3 h | 0.8 |
+| + Env + Dual reviewer + past.dev | [`exp/t9-env-reviewer-dual-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-dual-pastdev) | 0.24 ± 0.29 | 0.48 | 0.50 / 0.07 | $2.00 | 1.9 h | 0.6 |
+| *+ Env + Sub-agents v4 + past.dev (1 run only)* | [`exp/t9-env-subagents-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-pastdev) | *0.50* | *0.67* | *–* | *$10.83* | *6.5 h* | *2.0 †* |
 | *Paper: GPT-5.4 Mini, task 9* | – | *0.71 (one run)* | *not reported* | – | *$8.47 (mean over all 20 tasks)* | – | *3.25 (all tasks)* |
 
 † Judged on the full logs. See [the judge blind spot](#3-the-official-process-judge-cannot-see-sub-agents) below.
-Rows in *italics* are versions whose 5 runs are not all finished yet. They make no claim and are not tested.
+The project ended on 2026-11-16 and these are the final numbers. The v4 + past.dev version (in *italics*) has a single
+run, because the other 4 were cancelled when the API budget ran out. It makes no claim and is not tested. One v5 run
+crashed before writing an eval log and is not counted.
 
 **Statistics.** Exact one-sided permutation tests against the baseline (5 vs 5 runs, all 252 relabellings):
 
@@ -30,7 +35,14 @@ Rows in *italics* are versions whose 5 runs are not all finished yet. They make 
 |---|---|---|
 | Reviewer | **p = 0.024** | **p = 0.012** |
 | Env | p = 0.20 | p = 0.16 |
-| Sub-agents | p = 0.42 | p = 0.07 |
+| Sub-agents (v4) | p = 0.42 | p = 0.07 |
+| Sub-agents v5 | p = 0.34 | p = 0.18 |
+| Sub-agents v5 + past.dev | p = 0.18 | p = 0.04 |
+| Reviewer + past.dev | p = 0.22 | p = 0.17 |
+| Dual reviewer + past.dev | p = 0.83 | p = 0.79 |
+
+These are 7 tests, so only the reviewer's result should be read as a real effect. v5 + past.dev reaches p = 0.04 on one
+metric only, which is weak evidence with this many comparisons.
 
 The figures below show every run.
 
@@ -60,10 +72,11 @@ What remains after the environment is fixed is scientific choices, not tooling.
 ### 3. The official process judge cannot see sub-agents
 The official process judge reads only the main agent's messages (`samples[0].messages`). In the sub-agent versions that
 agent is the orchestrator, so the judge saw 103–189 orchestrator messages, while the sub-agents made **810–1,757 tool calls**
-it never saw. The result was **0 failure tags in every sub-agent run**.
+it never saw. The result was **0 failure tags in every v4 sub-agent run**. Over all 16 sub-agent runs, the official
+judge tagged only 3.
 
 We re-ran the same judge (same prompt, model and 120k-character budget) on the full trace rebuilt from the eval logs. Every
-run then gets an "inefficient analysis" tag. The official `judge.json` files are left unchanged, and the re-judged results
+v4 run then gets an "inefficient analysis" tag, and 15 of the 16 sub-agent runs get at least one tag. The official `judge.json` files are left unchanged, and the re-judged results
 are stored next to them as `judge_fulltrace.json`. Any benchmark that grades process from the top-level transcript will
 over-credit multi-agent harnesses in the same way.
 
@@ -82,9 +95,26 @@ in a $8.88 run:
 These findings shaped **v5** (blocking waits, no rebuilding valid artifacts, parallel dependency levels, sub-agents at
 `medium` effort, no planner) and a **past.dev run memory**, so that sub-agents share what earlier agents found.
 
-**First v5 results (preliminary, 4 of 10 runs finished):** cost drops from $10.14 to **$3.65 (v5, 1 run)** and **$3.08
-(v5 + past.dev, mean of 3 runs)**, and time from 5.7 h to about 2.8 h. The score stays at the v4 level (task score 0.50 and
-0.48). The cost fixes work, but sub-agents still do not beat the single-agent reviewer.
+**Final v5 results (5 runs each):**
+
+- **Cost and time:** cost drops from $10.14 to **$3.60 (v5)** and **$3.21 (v5 + past.dev)**, about 3× cheaper. Time drops
+  from 5.7 h to about 3.4 h.
+- **v5 alone:** the score stays at the v4 level (mean artifact score 0.64 against 0.66). The v4 stability is lost: one run
+  fell to 0.46.
+- **v5 + past.dev:** with the shared memory, the stability comes back (0.649 to 0.723, mean 0.68), and this is the best
+  sub-agent version.
+
+The cost fixes work, but sub-agents still do not beat the single-agent reviewer (0.83 at $2.24).
+
+### 4b. past.dev memory does not help the reviewer
+Giving the reviewer memory of the tables it already accepted did not help:
+
+- **Reviewer + past.dev:** mean artifact score 0.66 against 0.83 for the plain reviewer (p = 0.18, two-sided).
+- **Dual reviewer + past.dev:** the second "consistency" reviewer made things worse, at 0.48 (p = 0.02 against the plain
+  reviewer).
+
+Memory helps where agents would otherwise redo each other's work (the sub-agents). It hurts where a single agent already
+holds the context.
 
 ### 5. One ambiguous sentence in the prompt drives most of the error left in the T98G artifacts
 The count matrix is correct (score 1.00) in **every** run. The T98G differential-expression and GO artifacts then split by
@@ -131,15 +161,15 @@ leaves only occasional "inefficient analysis" tags. † marks the full-trace re-
 Also: [pass frequency per artifact](figures/fig_C_heatmap_pass_frequency.png) and [summary table](figures/summary.md).
 PDFs sit next to each PNG.
 
-## Versions still running (results are added as runs finish)
+## What the later versions changed
 
 | Version | Branch | Idea |
 |---|---|---|
 | + Env + Reviewer + past.dev | [`exp/t9-env-reviewer-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-pastdev) | The reviewer also sees the tables it already accepted in this run, for cross-table format consistency |
 | + Env + Dual reviewer + past.dev | [`exp/t9-env-reviewer-dual-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-reviewer-dual-pastdev) | Local reviewer plus a consistency reviewer with a rolling run memory; both must accept |
-| + Env + Sub-agents v5 (1/5 done) | [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | The cost fixes from finding 4 |
-| + Env + Sub-agents + past.dev | [`exp/t9-env-subagents-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-pastdev) | v4 plus a shared past.dev memory of inspections, files and conventions |
-| + Env + Sub-agents v5 + past.dev (3/5 done) | [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | Both of the above |
+| + Env + Sub-agents v5 | [`exp/t9-env-subagents-v5`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5) | The cost fixes from finding 4 |
+| + Env + Sub-agents + past.dev | [`exp/t9-env-subagents-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-pastdev) | v4 plus a shared past.dev memory of inspections, files and conventions (1 run; the rest were cancelled when the API budget ran out) |
+| + Env + Sub-agents v5 + past.dev | [`exp/t9-env-subagents-v5-pastdev`](https://github.com/timothe-chaumont/BixBench3/tree/exp/t9-env-subagents-v5-pastdev) | Both of the above |
 
 ## Method notes and caveats
 

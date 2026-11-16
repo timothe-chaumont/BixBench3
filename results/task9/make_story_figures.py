@@ -24,9 +24,11 @@ NAMES = {
     "t9-env": "+ Env",
     "t9-env-reviewer": "+ Env\n+ Reviewer",
     "t9-env-subagents": "+ Env\n+ Swarm",
+    "t9-env-subagents-v5-pastdev": "+ Env\n+ Swarm v5 + past.dev",
 }
 GREY, BLUE, GREEN, ORANGE = "#8a8984", "#2a78d6", "#1baf7a", "#eb6834"
-COLOR = {"t9-baseline": GREY, "t9-env": BLUE, "t9-env-reviewer": GREEN, "t9-env-subagents": ORANGE}
+COLOR = {"t9-baseline": GREY, "t9-env": BLUE, "t9-env-reviewer": GREEN, "t9-env-subagents": ORANGE,
+         "t9-env-subagents-v5-pastdev": "#c03b8a"}
 
 
 def complete(runs):
@@ -96,8 +98,10 @@ def fig_cost_time(runs):
             mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
             ax.scatter(xs, ys, s=26, color=COLOR[c], alpha=0.4, edgecolor="none", zorder=2)
             ax.scatter([mx], [my], s=120, color=COLOR[c], edgecolor=mf.SURFACE, linewidth=1.5, zorder=3)
-            ax.annotate(NAMES[c].replace("\n", " "), (mx, my), xytext=(8, 6), textcoords="offset points",
-                        fontsize=9.5, color=mf.INK)
+            two_line = c == "t9-env-subagents-v5-pastdev"  # one line would run into the "+ Env + Swarm" label
+            label = "+ Env + Swarm v5\n+ past.dev" if two_line else NAMES[c].replace("\n", " ")
+            ax.annotate(label, (mx, my), xytext=(8, 6), textcoords="offset points",
+                        fontsize=9.5, color=mf.INK, linespacing=1.1)
         ax.set_xlabel(xlabel)
         ax.set_xlim(left=0)
         ax.grid(True, color=mf.GRID, lw=0.8)
