@@ -106,15 +106,60 @@ These findings shaped **v5** (blocking waits, no rebuilding valid artifacts, par
 
 The cost fixes work, but sub-agents still do not beat the single-agent reviewer (0.83 at $2.24).
 
-### 4b. past.dev memory does not help the reviewer
-Giving the reviewer memory of the tables it already accepted did not help:
+### 4b. past.dev shared memory: it helps the swarm, not the single agent
 
-- **Reviewer + past.dev:** mean artifact score 0.66 against 0.83 for the plain reviewer (p = 0.18, two-sided).
-- **Dual reviewer + past.dev:** the second "consistency" reviewer made things worse, at 0.48 (p = 0.02 against the plain
-  reviewer).
+[past.dev](https://past.dev) is a run-scoped memory service, used in two ways:
 
-Memory helps where agents would otherwise redo each other's work (the sub-agents). It hurts where a single agent already
-holds the context.
+- **In the swarm:** every agent's inspections, files, conventions and lessons are stored as cards. Before each sub-agent
+  starts, past.dev ranks the cards against its brief and hands it a context pack of about 10k characters.
+- **In the reviewer:** the reviewer gets the summaries of the tables it already accepted.
+
+Each pair below differs only by past.dev. The memory logs confirm that past.dev answered in every run (0 ranking
+fallbacks).
+
+| Pair (5 vs 5 runs) | Mean artifact score | Run-to-run SD | Cost / run | Model calls | Tool calls | Sub-agents | Memory cards / run |
+|---|---|---|---|---|---|---|---|
+| Swarm v5 → **v5 + past.dev** | 0.640 → **0.681** (+6%) | 0.091 → **0.025** (3.6× tighter) | $3.60 → **$3.21** (−11%) | 834 → 702 (−16%) | 913 → 742 (−19%) | 49 → 41 | 176–282 |
+| Reviewer → Reviewer + past.dev | **0.830** → 0.663 (−20%) | 0.125 → 0.191 | $2.24 → $2.13 (−5%) | 245 → 181 | 253 → 179 | – | 14 |
+| Reviewer → Dual reviewer + past.dev | **0.830** → 0.481 (−42%, p = 0.02) | 0.125 → 0.161 | $2.24 → $2.00 | – | – | – | 51–63 |
+| *Swarm v4 → v4 + past.dev (1 run)* | *0.664 → 0.667* | *–* | *$10.14 → $10.83* | *1,118 → 1,112* | *1,207 → 1,202* | *51 → 37* | *424* |
+
+**What the data show.** Used with the v5 swarm, past.dev does not cost extra. The swarm gets slightly better, much more
+stable, and cheaper at the same time:
+
+- **Fewer calls:** 16% fewer model calls and 19% fewer tool calls, about 11% cheaper.
+- **Fewer sub-agents:** fewer were spawned.
+- **Stability:** this is the clearest effect. All 5 runs fall between 0.649 and 0.723.
+
+With the single-agent reviewer the memory gives no gain, and the score drops.
+
+**Caveats:**
+
+- **Significance:** with 5 runs per arm, none of the swarm differences is significant on its own (score p = 0.62,
+  cost p = 0.34, two-sided). They all point the same way, and the variance drop is large.
+- **v4 + past.dev was exploratory:** we were still working out how to wire past.dev into the orchestrator, and only 1
+  of 5 runs finished before the API budget ran out. We draw no conclusion from it.
+- **The reviewer arms test a different use:** there the memory feeds a tool-less format reviewer, not the agent doing the
+  work.
+
+**Our hypothesis.** How much a shared memory helps depends on the ratio of two things:
+
+- the context the task needs to carry, meaning facts, file layouts, conventions and upstream results;
+- the context the model can hold while still working well.
+
+In the swarm, every sub-agent starts with an empty context, so knowledge must travel between agents. Without memory they
+re-read it: in a v4 run, 17 of 17 agents re-inspected the environment manifest. They also miss shared conventions,
+which caused 2 tables to be rebuilt. Here the need is far larger than what each agent holds, and past.dev fills the gap
+with a compact, ranked pack. The v5 swarm runs filled past.dev with 176–282 cards each.
+
+A single agent, with or without a reviewer, already holds the whole run in one context. Task 9 fits in GPT-5.4 Mini's
+context, so the memory adds little: the reviewer stored only 14 cards per run. It also adds a constraint, matching earlier
+tables, which seems to have made the reviewer reject or reshape tables that were fine.
+
+The hypothesis predicts two things we could not test in time:
+
+- **Longer tasks:** larger gains on longer or multi-paper tasks, and for single agents whose context fills up.
+- **Larger contexts:** smaller gains with models that have a larger effective context.
 
 ### 5. One ambiguous sentence in the prompt drives most of the error left in the T98G artifacts
 The count matrix is correct (score 1.00) in **every** run. The T98G differential-expression and GO artifacts then split by

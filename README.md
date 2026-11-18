@@ -136,6 +136,32 @@ medium effort.
 A v4 swarm with past.dev got only 1 run before the API budget ran out. The project ended on 2026-11-16, so these are the
 final numbers.
 
+### past.dev shared memory: with and without
+
+[past.dev](https://past.dev) gives the run a shared memory. Inspections, files, conventions and lessons are stored as
+cards, and each new agent receives a ranked context pack instead of starting from nothing. Each pair below differs only
+by past.dev:
+
+| 5 vs 5 runs | Score | Run-to-run SD | Cost / run | Tool calls |
+|---|---|---|---|---|
+| Swarm v5 → **+ past.dev** | 0.640 → **0.681** | 0.091 → **0.025** | $3.60 → **$3.21** | 913 → **742** |
+| Reviewer → + past.dev | **0.830** → 0.663 | 0.125 → 0.191 | $2.24 → $2.13 | 253 → 179 |
+
+- **With the swarm:** used correctly, past.dev gains on every axis at once: a little score, much more stability, and
+  fewer tokens and dollars. Sub-agents stop re-reading what others already found.
+- **With a single reviewer agent:** no gain, and the score falls.
+- **v4 + past.dev:** exploratory. We were still learning how to integrate the memory, and only 1 run finished.
+
+**Our hypothesis:** the gain from shared memory depends on the ratio between the context a task requires and the
+context the model can hold while still working well.
+
+- **A swarm** splits the work over dozens of fresh contexts, so that ratio is high. It stored 176–282 memory cards per
+  run.
+- **A single agent** already holds task 9 in one context (14 cards per run), so memory adds little.
+
+With 5 runs per arm these differences are not significant on their own. Details and caveats are in
+[results/task9](results/task9/#4b-pastdev-shared-memory-it-helps-the-swarm-not-the-single-agent).
+
 One more lesson from the logs: most of the remaining error on T98G comes from one ambiguous sentence in the task
 (*"Run DESeq2 separately by cell line and clone contrast"*). It leads agents to fit a different statistical design from
 the paper's.
