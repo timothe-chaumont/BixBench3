@@ -181,12 +181,16 @@ item worth reporting.
 
 ## Figures
 
+The figures show the five versions of the landing-page story: baseline, + env, + reviewer, + swarm v5 and + swarm v5 +
+past.dev. The summary table above also keeps the exploratory versions: v4, the reviewer variants with memory and v4 +
+past.dev.
+
 **Per-artifact scores** (mean, min–max underneath; cf. paper Supp. Fig. 4B). The reviewer improves almost every column,
 most strongly the T98G DE tables and the GO enrichments. The count matrix is solved in every run.
 
 ![Heatmap of artifact scores](figures/fig_C_heatmap_scores.png)
 
-**Task score per run, with mean and 95% CI.** Left: pass rate, the paper's score. Right: mean artifact score. Versions marked *preliminary* have fewer than 5 runs.
+**Task score per run, with mean and 95% CI.** Left: pass rate, the paper's score. Right: mean artifact score. 
 
 ![Task scores](figures/fig_D_task_scores.png)
 

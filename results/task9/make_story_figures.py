@@ -23,12 +23,12 @@ NAMES = {
     "t9-baseline": "Baseline",
     "t9-env": "+ Env",
     "t9-env-reviewer": "+ Env\n+ Reviewer",
-    "t9-env-subagents": "+ Env\n+ Swarm",
-    "t9-env-subagents-v5-pastdev": "+ Env\n+ Swarm v5 + past.dev",
+    "t9-env-subagents-v5": "+ Env\n+ Swarm v5",
+    "t9-env-subagents-v5-pastdev": "+ Env\n+ Swarm v5\n+ past.dev",
 }
-GREY, BLUE, GREEN, ORANGE = "#8a8984", "#2a78d6", "#1baf7a", "#eb6834"
-COLOR = {"t9-baseline": GREY, "t9-env": BLUE, "t9-env-reviewer": GREEN, "t9-env-subagents": ORANGE,
-         "t9-env-subagents-v5-pastdev": "#c03b8a"}
+GREY, BLUE, GREEN, ORANGE, PINK = "#8a8984", "#2a78d6", "#1baf7a", "#eb6834", "#c03b8a"
+COLOR = {"t9-baseline": GREY, "t9-env": BLUE, "t9-env-reviewer": GREEN, "t9-env-subagents-v5": ORANGE,
+         "t9-env-subagents-v5-pastdev": PINK}
 
 
 def complete(runs):
@@ -36,27 +36,46 @@ def complete(runs):
 
 
 def fig_failures(runs):
-    vers = ["t9-baseline", "t9-env"]
-    fig, ax = plt.subplots(figsize=(6.2, 4.4))
-    for x, c in enumerate(vers):
+    """Headline: failure-mode tags per run, paper reference first (hatched, all 20 tasks), then our versions."""
+    vers = [c for c in NAMES if runs.get(c)]
+    fig, ax = plt.subplots(figsize=(9.6, 4.8))
+    paper = {m: 0.0 for m, _, _ in mf.MODES}
+    for tag, k in mf.PAPER_TAGS.items():
+        paper[mf.mode_of(tag)] += k / mf.PAPER_TASKS
+    cols = [("paper", paper, True)]
+    for c in vers:
         cnt = Counter(mf.mode_of(f["tag"]) for r in runs[c] for f in r.get("failure_modes") or [])
+        cols.append((c, {m: cnt[m] / len(runs[c]) for m, _, _ in mf.MODES}, False))
+    xs = [0] + [i + 1.4 for i in range(len(vers))]  # gap after the paper bar
+    for x, (c, per, is_paper) in zip(xs, cols):
         bottom = 0.0
         for m, _, color in mf.MODES:
-            v = cnt[m] / len(runs[c])
+            v = per[m]
             if v:
-                ax.bar(x, v, bottom=bottom, width=0.55, color=color, edgecolor=mf.SURFACE, linewidth=2)
+                ax.bar(x, v, bottom=bottom, width=0.6, color=color, edgecolor=mf.SURFACE, linewidth=2,
+                       hatch="//" if is_paper else None, alpha=0.55 if is_paper else 1)
                 bottom += v
-        ax.text(x, bottom + 0.05, f"{bottom:.1f}", ha="center", fontsize=12, fontweight="bold", color=mf.INK)
-    ax.set_xticks(range(len(vers)))
-    ax.set_xticklabels([f"{NAMES[c]} (n=5)" for c in vers], fontsize=10)
+        ax.text(x, bottom + 0.06, f"{bottom:.2f}" if is_paper else f"{bottom:.1f}", ha="center", fontsize=12,
+                fontweight="bold", color=mf.INK2 if is_paper else mf.INK)
+    ax.axvline(0.7, color=mf.INK2, lw=0.8, ls=":")
+    labels = ["Paper: GPT-5.4 Mini\n(mean over all 20 tasks,\nreference only)"] + \
+             [f"{NAMES[c]}\n(n={len(runs[c])})" for c in vers]
+    ax.set_xticks(xs)
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.get_xticklabels()[0].set_color(mf.INK2)
     ax.set_ylabel("Failure-mode tags per run (mean)")
-    ax.set_ylim(0, 2.9)
+    ax.set_ylim(0, 3.7)
     ax.yaxis.grid(True, color=mf.GRID, lw=0.8)
     ax.set_axisbelow(True)
-    used = {mf.mode_of(f["tag"]) for c in vers for r in runs[c] for f in r.get("failure_modes") or []}
-    ax.legend(handles=[Patch(facecolor=col, label=n) for m, n, col in mf.MODES if m in used],
-              loc="upper right", frameon=False, fontsize=8.5)
-    ax.set_title("Process-judge failure modes, task 9", loc="left", fontweight="bold", fontsize=11)
+    used = {m for _, per, _ in cols for m, v in per.items() if v}
+    handles = [Patch(facecolor=col, label=n) for m, n, col in mf.MODES if m in used]
+    handles.append(Patch(facecolor="white", edgecolor=mf.INK2, hatch="//", label="Paper reference (all tasks, not task 9)"))
+    ax.legend(handles=handles, loc="upper right", frameon=False, fontsize=8)
+    ax.set_title("Task 9: failure modes flagged by the official process judge, per run", loc="left",
+                 fontweight="bold", fontsize=11)
+    fig.text(0.01, -0.02, "Swarm runs are judged on the full trace (all sub-agents); the official judge only reads the "
+             "orchestrator. The paper reports no task 9 breakdown, so its bar is an order of magnitude, not a comparison.",
+             fontsize=7.5, color=mf.INK2)
     fig.tight_layout()
     mf.save(fig, "story_1_failures")
 
@@ -98,9 +117,9 @@ def fig_cost_time(runs):
             mx, my = sum(xs) / len(xs), sum(ys) / len(ys)
             ax.scatter(xs, ys, s=26, color=COLOR[c], alpha=0.4, edgecolor="none", zorder=2)
             ax.scatter([mx], [my], s=120, color=COLOR[c], edgecolor=mf.SURFACE, linewidth=1.5, zorder=3)
-            two_line = c == "t9-env-subagents-v5-pastdev"  # one line would run into the "+ Env + Swarm" label
-            label = "+ Env + Swarm v5\n+ past.dev" if two_line else NAMES[c].replace("\n", " ")
-            ax.annotate(label, (mx, my), xytext=(8, 6), textcoords="offset points",
+            label = NAMES[c].replace("\n", " ").replace(" + past.dev", "\n+ past.dev")
+            below = c == "t9-env-subagents-v5"  # keeps it clear of the past.dev label just above
+            ax.annotate(label, (mx, my), xytext=(8, -16) if below else (8, 6), textcoords="offset points",
                         fontsize=9.5, color=mf.INK, linespacing=1.1)
         ax.set_xlabel(xlabel)
         ax.set_xlim(left=0)

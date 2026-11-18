@@ -24,7 +24,8 @@ def main():
         "t9-baseline": "Baseline",
         "t9-env": "+ Preinstalled\nenv",
         "t9-env-reviewer": "+ Env\n+ Reviewer",
-        "t9-env-subagents": "+ Env\n+ Sub-agents",
+        "t9-env-subagents-v5": "+ Env\n+ Swarm v5",
+        "t9-env-subagents-v5-pastdev": "+ Env + Swarm v5\n+ past.dev",
     }
     labels = [f"{short.get(c, l)}\n(n={len(runs[c])})" for c, l in vers]
     xs = range(len(vers))

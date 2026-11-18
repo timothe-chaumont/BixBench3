@@ -31,16 +31,12 @@ OUT = HERE / "figures"
 OUT.mkdir(exist_ok=True)
 
 # ---- versions: order, labels (add new conditions here) ---------------------------------
-VERSIONS = [
+VERSIONS = [  # the story told on the landing page; other branches are listed in README.md, not plotted
     ("t9-baseline", "Baseline"),
     ("t9-env", "+ Env"),
     ("t9-env-reviewer", "+ Env + Reviewer"),
-    ("t9-env-reviewer-pastdev", "+ Env + Reviewer + past.dev"),
-    ("t9-env-reviewer-dual-pastdev", "+ Env + Dual reviewer + past.dev"),
-    ("t9-env-subagents", "+ Env + Sub-agents (v4)"),
-    ("t9-env-subagents-v5", "+ Env + Sub-agents v5"),
-    ("t9-env-subagents-pastdev", "+ Env + Sub-agents + past.dev"),
-    ("t9-env-subagents-v5-pastdev", "+ Env + Sub-agents v5 + past.dev"),
+    ("t9-env-subagents-v5", "+ Env + Swarm v5"),
+    ("t9-env-subagents-v5-pastdev", "+ Env + Swarm v5 + past.dev"),
 ]
 PAPER_LABEL = "Paper: GPT 5.4 Mini"
 
